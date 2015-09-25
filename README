@@ -1,0 +1,57 @@
+This is a very simple script for make an automatic installation. This script is preconfigured to provide obarun but you can use it for install your own configuration.
+Starting from obarun-iso or official Arch-iso or with a minimal Arch architecture is possible.
+If you don't touch anything in these scripts, a fresh installation of obarun is made.
+Own repository and AUR repo is supported.
+
+Simply unzip, then :
+
+$ chown -R root:root obarun-install/
+
+Don't forget, all files and modifications must be made with root privilege. 
+
+Assumptions:
+============
+
+	User has partitioned, formatted, and mounted partitions on a directory
+	Network is functional
+	A valid mirror appears in /etc/pacman.d/mirrorlist
+
+File description
+================
+
+functions : functions declaration
+obarun-install : principal script. This is the script you need to launch
+config directory : configuration file directory
+
+How to
+======
+
+The directory /config provide a sub-directory containing the necessary files to make and customize the installation. If you want make your own installation simply copy and paste the directory obarun and name it as you want.
+You can find in this sub-directory :
+	- pacman.conf : add, remove and modify what do you want. This is the configuration file for pacman called by the principal script
+	- customizeChroot : This script is called to customize the fresh install. Make a new user, define locale, move or rename somes files, install particular packages etcetera is made by it.
+	- sub-directory package_list : You can find two files on it :
+				- base_repo : package list installed from repository configured in pacman.conf
+				- aur_repo : package list installed from AUR repository
+	- sub-directory rootfs : directory is fully copied without change in the fresh installation. This directory is the / on the fresh install. It means, any files placed within this directory erase the same files on the fresh install. It's within this directory that you put your configuration files for the fresh install.
+							 It's the same philosophy as Archiso with airootfs.	
+	 
+So launch the script file obarun-install with root privelege.
+
+License
+=======
+
+This script is under license BEER-WARE
+"THE BEER-WARE LICENSE" (Revision 42):
+<eric@obarun.org> wrote this file.  As long as you retain this notice you
+can do whatever you want with this stuff. If we meet some day, and you think
+this stuff is worth it, you can buy me a beer in return.   Eric Vidal
+
+Other words
+===========
+
+Please if you like it or find a bugs or need more information, give a feedback on :
+
+http://obarun.org/forum
+
+enjoy it :)

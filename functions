@@ -1,0 +1,290 @@
+#!/usr/bin/bash
+## This script is under license BEER-WARE.
+# "THE BEER-WARE LICENSE" (Revision 42):
+# <eric@obarun.org> wrote this file.  As long as you retain this notice you
+# can do whatever you want with this stuff. If we meet some day, and you think
+# this stuff is worth it, you can buy me a beer in return.   Eric Vidal
+
+##		Shell color 
+
+bold=$(tput bold)
+reset=$(tput sgr0)
+red=$(tput setaf 1)
+bred=${bold}$(tput setaf 1)
+green=$(tput setaf 2)
+bgreen=${bold}$(tput setaf 2)
+yellow=$(tput setaf 3)
+byellow=${bold}$(tput setaf 3)
+blue=$(tput setaf 4)
+bblue=${bold}$(tput setaf 4)
+
+## 		Some variables
+
+config_dir=""
+newroot=""
+pacmanEdit=""
+arch_list=""
+aur_list=""
+edit_custom=""
+archlist=`pwd`/config
+aurlist=`pwd`/config
+pac_conf=`pwd`/config
+customize_chroot=`pwd`/config
+
+
+## 		Information display by the script 
+
+echo_info(){
+	echo "${byellow}==>>${1}${reset}"
+}
+echo_retry(){
+	echo "${bblue}==>>${1}${reset}"
+}
+echo_valid(){
+	echo "${bgreen}==>>${1}${reset}"
+}
+echo_display(){
+	echo "${bold}==>>${1}${reset}"
+}
+answer(){
+	echo_retry " Please answer y or n :"
+}
+
+## 		Exit
+
+die (){
+      local message code 
+      message="$1"
+      [[ -n "$2" ]] && code="$2" || code=1
+      if [[ -n "$message" ]] ; then
+        echo "${bred}==>> Error: ${message}; exit status ${code}${reset}"
+      else
+        echo "${bred}==>> Error: exiting with status ${code}${reset}"
+      fi
+      exit 1
+}
+
+## 		Check list option
+
+check_elements(){
+	for e in "${@:2}"; do [[ $e == $1 ]] && break; done;
+}
+
+## 		Select editor
+
+select_editor(){
+	editors_list=("nano" "vi");
+	echo_display " Select your editor :"
+	select editor in "${editors_list[@]}"; do
+		if check_elements "$editor" "${editors_list[@]}"; then
+			echo_valid " Your editor is now : $editor"
+		break
+		else 
+			echo_retry " Invalid option, enter 1 or 2 :"
+		fi
+	done
+}
+
+## 		Select config directory
+
+choose_dir(){
+	echo_info " This script give you the choice to configure your installation as you want,"
+	echo_info " it means you can define :"
+	echo_info " - your list of installed package with your proper repo AUR including,"
+	echo_info " - the configuration of pacman.conf used"
+	echo_info " - the customization of the fresh install."
+	echo_info " To do this you need to define the directory who provide the configuration scripts" 
+	echo_info " locate in `pwd`/config/ :"
+	echo_display " Enter the directory name"
+	read config_dir
+	
+	while [[ ! -d `pwd`/config/"$config_dir" ]]; do
+		echo_retry " Not a valid name, please retry :"	
+		read config_dir
+	done
+	
+	echo_valid " You chose $config_dir"
+}
+
+## 		Edit pacman.conf
+
+edit_pacman(){
+	echo_display " Do you want edit pacman.conf, e.g add/remove repository [y/n]:"
+	read pacmanEdit
+	
+	while [[ "$pacmanEdit" != @(y|n) ]]; do
+		answer
+		read pacmanEdit
+	done
+	
+	case "$pacmanEdit" in
+			y )
+			"$editor" "$pac_conf"/"$config_dir"/pacman.conf
+			;;
+			n )
+			;;
+	esac
+}
+
+## 		Select packages in list files
+
+listpackage(){
+	echo_display " Do you want edit the package list installed from repository define in pacman.conf [y|n]:"
+	read arch_list
+	
+	while [[ "$arch_list" != @(y|n) ]]; do
+		answer
+		read arch_list
+	done
+	
+	case "$arch_list" in
+			y )
+			"$editor" "$archlist"/"$config_dir"/package_list/base_repo
+			;;
+			n )
+			;;
+	esac
+}
+
+aurpackage(){
+	echo_display " Do you want edit the package list installed from AUR [y|n]:"
+	read aur_list
+	
+	while [[ "$aur_list" != @(y|n) ]]; do
+		answer
+		read aur_list
+	done
+	
+	case "$aur_list" in
+			y )
+			"$editor" "$aurlist"/"$config_dir"/package_list/aur_repo 
+			;;
+			n )
+			;;
+	esac
+}
+
+## 		Edit customizeChroot file
+
+edit_customize_chroot(){
+	echo_display " Do you want edit the scripts which configure the fresh installation [y|n]:"
+	read edit_custom 
+	
+	while [[ "$edit_custom" != @(y|n) ]]; do
+		answer
+		read edit_custom 
+	done
+	
+	case "$edit_custom" in
+			y )
+			"$editor" "$customize_chroot"/"$config_dir"/customizeChroot
+			;;
+			n )
+			;;
+	esac
+}
+
+## 		Create temporary users for yaourt
+
+user_tmp(){
+	if [[ $(awk -F':' '{ print $1}' /etc/passwd | grep usertmp) </dev/null ]]; then
+		echo_info " Create a temporary user needed to install AUR packages"
+			if [[ -e /etc/sudoers ]]; then
+				useradd -m -g users -G "wheel,disk,storage,optical,floppy,adm,network" -s /bin/bash usertmp || die " Impossible to create user : usertmp"
+				echo "%usertmp ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
+			else
+				echo "${bred}==>> The file /etc/sudoers doesn't exists,"
+				echo_info " Installing sudo package"
+				pacman -S sudo
+				user_tmp
+			fi
+	fi
+}
+
+##		Delete usertmp
+
+rem_usertmp(){
+	echo_info " Removing user : usertmp"
+	userdel -r usertmp
+	sed -i '/usertmp/d' /etc/sudoers
+}
+## 		Clean on exit
+
+clean_install(){
+	if [[ $(awk -F':' '{ print $1}' /etc/passwd | grep usertmp) >/dev/null ]]; then
+		rem_usertmp
+	else
+	exit
+	fi
+}
+		
+## 		Select root directory
+
+rootdir(){	
+	echo_display " Enter your root directory :"
+	read newroot
+	
+	until [[ -d "$newroot" ]]; do
+		echo_retry " This is not a directory, please retry :"
+		read newroot
+	done
+	
+	while ! mountpoint -q "$newroot"; do
+		echo_retry " This is not a valide mountpoint, please retry :"
+		rootdir
+	done
+	
+	echo_valid " Your root directory for installation is now : $newroot"
+}
+
+## Check if needed packages is installed
+
+check_pac_needed(){
+	if [[ ! $(pacman -Qs arch-install-scripts) >/dev/null ]]; then
+		echo_info " Installing arch-install-scripts"
+		pacman -S arch-install-scripts --config "$pac_conf"/"$config_dir"/pacman.conf || die " Impossible to install the package arch-install-scripts"
+	else
+		echo_valid " arch-install-scripts already installed"
+	fi
+	if [[ ! $(pacman -Qs yaourt) >/dev/null ]]; then
+		echo_info " Installing yaourt"
+		pacman -S base-devel package-query yaourt --config "$pac_conf"/"$config_dir"/pacman.conf || die " Impossible to install the package arch-install-scripts"
+	else
+		echo_valid " yaourt is already installed"
+	fi
+}
+
+## 		Install packages with pacman
+
+pac_install(){
+	pacman -r "$newroot" -S $(grep -h -v ^# $archlist/$config_dir/package_list/base_repo) --config "$pac_conf"/"$config_dir"/pacman.conf || die " Failed to install packages"
+}
+
+## 		Install package from aur
+
+aur_install(){
+	sudo -u usertmp yaourt -r "$newroot" -Sy $(grep -h -v ^# $aurlist/$config_dir/package_list/aur_repo) || die " Failed to install packages"
+}
+	
+## 		Create needed directory
+
+create_dir(){
+	echo_info " Create needed directory in ${newroot}"
+	mkdir -m 0755 -p "$newroot"/var/{cache/pacman/pkg,lib/pacman,log} "$newroot"/{dev,run,etc}
+	mkdir -m 0755 -p "$newroot"/dev/{pts,shm}
+	mkdir -m 1777 -p "$newroot"/tmp
+	mkdir -m 0555 -p "$newroot"/{sys,proc}
+}
+
+## 		Mounting necessary directory
+
+mount_dir(){
+	echo_info " Mounting filesystem in ${newroot}"
+	mount -o nosuid,noexec,nodev -t proc proc "$newroot"/proc
+	mount -o nosuid,noexec,nodev -t sysfs sys "$newroot"/sys 
+	mount -o mode=0755,nosuid -t devtmpfs udev "$newroot"/dev 
+	mount -o mode=0620,gid=5,nosuid,noexec -t devpts devpts "$newroot"/dev/pts 
+	mount -o mode=1777,nosuid,nodev -t tmpfs shm "$newroot"/dev/shm 
+	mount -o nosuid,nodev,mode=0755 -t tmpfs run "$newroot"/run 
+	mount -o mode=1777,strictatime,nodev,nosuid -t tmpfs tmp "$newroot"/tmp 
+}

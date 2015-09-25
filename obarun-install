@@ -1,0 +1,74 @@
+#!/usr/bin/bash
+# This script is under license BEER-WARE
+# "THE BEER-WARE LICENSE" (Revision 42):
+# <eric@obarun.org> wrote this file.  As long as you retain this notice you
+# can do whatever you want with this stuff. If we meet some day, and you think
+# this stuff is worth it, you can buy me a beer in return.   Eric Vidal
+#
+# Assumptions:
+#  1) User has partitioned, formatted, and mounted partitions on a directory
+#  2) Network is functional
+#  3) A valid mirror appears in /etc/pacman.d/mirrorlist
+#
+
+shopt -s extglob
+
+##		Clean before exit
+
+trap "clean_install" EXIT ERR QUIT KILL STOP INT
+
+##		Check is the functions file exits
+
+if [[ -f `pwd`/functions ]]; then
+  source functions
+else
+  die "${bred}==>> Missing file : functions${reset}"
+fi
+
+##		Must be root user 
+
+(( EUID == 0 )) || die " ${bred}You must be run this script with root privileges"
+
+##		Let's go
+
+select_editor
+choose_dir # Never comment this function
+edit_pacman
+listpackage
+aurpackage
+edit_customize_chroot
+rootdir # Never comment this function
+user_tmp
+create_dir
+mount_dir
+
+##		Copying file needed
+
+echo_info " Copy needed file in ${newroot}"
+cp /etc/resolv.conf "$newroot"/etc/resolv.conf || die " Impossible to copy the file resolv.conf"
+cp "$customize_chroot"/"$config_dir"/customizeChroot "$newroot"/etc/customizeChroot || die " ${customize_chroot} do not exist"
+
+##		Sync database
+
+echo_info " Synchronize database and check needed packages"
+pacman -r "$newroot" -Syy --config "$pac_conf"/"$config_dir"/pacman.conf || die " Impossible to synchronize database"
+check_pac_needed
+
+##		Install packages
+
+echo_info " Install packages from lists"
+pac_install || die " Impossible to install packages" 
+aur_install || die " Impossible to install packages"
+
+echo_info " Generate fstab"
+genfstab -p "$newroot" >> "$newroot"/etc/fstab || die " Impossible to generate fstab"
+echo_info " Copying configuration files in ${newroot}"
+cp -af `pwd`/config/"$config_dir"/rootfs/* "$newroot"/ || die " Impossible to copy files"
+
+##		Customize newroot
+
+echo_info " Enter in chroot of ${newroot}"
+chroot "$newroot" /etc/customizeChroot || die " Failed to enter in : ${newroot} or Failed to execute correctly the file"
+
+
+
