@@ -4,7 +4,7 @@
 # <eric@obarun.org> wrote this file.  As long as you retain this notice you
 # can do whatever you want with this stuff. If we meet some day, and you think
 # this stuff is worth it, you can buy me a beer in return.   Eric Vidal
-
+shopt -s extglob
 ##		Shell color 
 
 bold=$(tput bold)
@@ -33,7 +33,9 @@ customize_chroot=`pwd`/config
 
 
 ## 		Information display by the script 
-
+echo_bold(){
+	echo "${bold}${1}${reset}"
+}
 echo_info(){
 	echo "${byellow}==>>${1}${reset}"
 }
@@ -70,7 +72,7 @@ check_elements(){
 	for e in "${@:2}"; do [[ $e == $1 ]] && break; done;
 }
 
-## 		Select editor
+## 		Select, check editor
 
 select_editor(){
 	editors_list=("nano" "vi");
@@ -85,103 +87,42 @@ select_editor(){
 	done
 }
 
+check_editor(){
+	if [[ "$editor" == "" ]]; then
+		echo_info " You need first to define your editor"
+		echo_info " Please choose step 1 in the Main menu" 
+		(sleep 3) && main_menu
+	fi
+}
+
 ## 		Select config directory
 
 choose_dir(){
-	echo_info " This script give you the choice to configure your installation as you want,"
-	echo_info " it means you can define :"
-	echo_info " - your list of installed package with your proper repo AUR including,"
-	echo_info " - the configuration of pacman.conf used"
-	echo_info " - the customization of the fresh install."
-	echo_info " To do this you need to define the directory who provide the configuration scripts" 
-	echo_info " locate in `pwd`/config/ :"
-	echo_display " Enter the directory name"
-	read config_dir
-	
-	while [[ ! -d `pwd`/config/"$config_dir" ]]; do
-		echo_retry " Not a valid name, please retry :"	
-		read config_dir
+	dir_list=$(ls -U `pwd`/config/)
+	echo_display " Select the directory you want to use :"
+	select dir in $dir_list; do
+		if check_elements "$dir" $dir_list; then
+			config_dir="$dir"	 
+		break
+		else 
+			echo_retry " Invalid number, retry :"
+		fi
 	done
-	
 	echo_valid " You chose $config_dir"
 }
 
 ## 		Edit pacman.conf
 
 edit_pacman(){
-	echo_display " Do you want edit pacman.conf, e.g add/remove repository [y/n]:"
-	read pacmanEdit
-	
-	while [[ "$pacmanEdit" != @(y|n) ]]; do
-		answer
-		read pacmanEdit
-	done
-	
-	case "$pacmanEdit" in
-			y )
-			"$editor" "$pac_conf"/"$config_dir"/pacman.conf
-			;;
-			n )
-			;;
-	esac
-}
-
-## 		Select packages in list files
-
-listpackage(){
-	echo_display " Do you want edit the package list installed from repository define in pacman.conf [y|n]:"
-	read arch_list
-	
-	while [[ "$arch_list" != @(y|n) ]]; do
-		answer
-		read arch_list
-	done
-	
-	case "$arch_list" in
-			y )
-			"$editor" "$archlist"/"$config_dir"/package_list/base_repo
-			;;
-			n )
-			;;
-	esac
-}
-
-aurpackage(){
-	echo_display " Do you want edit the package list installed from AUR [y|n]:"
-	read aur_list
-	
-	while [[ "$aur_list" != @(y|n) ]]; do
-		answer
-		read aur_list
-	done
-	
-	case "$aur_list" in
-			y )
-			"$editor" "$aurlist"/"$config_dir"/package_list/aur_repo 
-			;;
-			n )
-			;;
-	esac
+	check_editor
+	"$editor" "$pac_conf"/"$config_dir"/pacman.conf		
 }
 
 ## 		Edit customizeChroot file
 
 edit_customize_chroot(){
-	echo_display " Do you want edit the scripts which configure the fresh installation [y|n]:"
-	read edit_custom 
-	
-	while [[ "$edit_custom" != @(y|n) ]]; do
-		answer
-		read edit_custom 
-	done
-	
-	case "$edit_custom" in
-			y )
-			"$editor" "$customize_chroot"/"$config_dir"/customizeChroot
-			;;
-			n )
-			;;
-	esac
+	check_editor
+	"$editor" "$customize_chroot"/"$config_dir"/customizeChroot
 }
 
 ## 		Create temporary users for yaourt
@@ -244,26 +185,26 @@ check_pac_needed(){
 		echo_info " Installing arch-install-scripts"
 		pacman -S arch-install-scripts --config "$pac_conf"/"$config_dir"/pacman.conf || die " Impossible to install the package arch-install-scripts"
 	else
-		echo_valid " arch-install-scripts already installed"
+		echo_valid " arch-install-scripts : already installed"
 	fi
 	if [[ ! $(pacman -Qs yaourt) >/dev/null ]]; then
 		echo_info " Installing yaourt"
 		pacman -S base-devel package-query yaourt --config "$pac_conf"/"$config_dir"/pacman.conf || die " Impossible to install the package arch-install-scripts"
 	else
-		echo_valid " yaourt is already installed"
+		echo_valid " yaourt : already installed"
 	fi
 }
 
 ## 		Install packages with pacman
 
 pac_install(){
-	pacman -r "$newroot" -S $(grep -h -v ^# $archlist/$config_dir/package_list/base_repo) --config "$pac_conf"/"$config_dir"/pacman.conf || die " Failed to install packages"
+	pacman -r "$newroot" -S $(grep -h -v ^# $archlist/$config_dir/package_list/repo_*) --config "$pac_conf"/"$config_dir"/pacman.conf || die " Failed to install packages"
 }
 
 ## 		Install package from aur
 
 aur_install(){
-	sudo -u usertmp yaourt -r "$newroot" -Sy $(grep -h -v ^# $aurlist/$config_dir/package_list/aur_repo) || die " Failed to install packages"
+	sudo -u usertmp yaourt -r "$newroot" -Sy $(grep -h -v ^# $aurlist/$config_dir/package_list/aur_*) || die " Failed to install packages"
 }
 	
 ## 		Create needed directory
@@ -287,4 +228,118 @@ mount_dir(){
 	mount -o mode=1777,nosuid,nodev -t tmpfs shm "$newroot"/dev/shm 
 	mount -o nosuid,nodev,mode=0755 -t tmpfs run "$newroot"/run 
 	mount -o mode=1777,strictatime,nodev,nosuid -t tmpfs tmp "$newroot"/tmp 
+}
+
+## 		Main menu
+
+main_menu(){
+
+step=100
+
+while [[ "$step" !=  10 ]]; do
+	clear
+	echo_bold ""
+	echo_bold ""
+	echo_bold "*****************************************"
+	echo_bold "              Main menu"
+	echo_bold "*****************************************"
+	echo_bold ""
+	echo_bold ""
+	echo_bold " 1  -  Select Editor"
+	echo_bold " 2  -  Choose the directory contening configuration files"
+	echo_bold " 3  -  Edit the pacman.conf used by the script"
+	echo_bold " 4  -  Edit the packages lists (AUR including) from repo defined in pacman.conf"
+	echo_bold " 5  -  Edit the scripts which configure the fresh installation"
+	echo_bold " 6  -  Enter your root directory of the installation"
+	echo_bold " 7  -  Install the new system"
+	echo_bold " 8  -  Exit installation script"
+	echo_bold ""
+	echo_bold ""
+	echo_display " Enter your choice :";read  step
+	
+	## 			Define new root before install
+	if [[ "$step" == 7 ]] && [[ "$step" >/dev/null ]]; then
+		echo_info " You need to define the directory contening configuration files before install the system (step 2)"
+		echo_display " Press enter to return to the Main menu"
+		read enter
+		step=100
+		main_menu
+	fi
+	if [[ "$step" == 7 ]] && [[ "$step6" >/dev/null ]]; then
+		echo_info " You need to define root directory before install the system (step 6)"
+		echo_display " Press enter to return to the Main menu"
+		read enter
+		step=100
+		main_menu
+	else
+
+		case "$step" in 
+			1)	select_editor;;
+			2)	choose_dir;; # Never comment this options
+			3)	edit_pacman;;
+			4)	select_list;;
+			5)	edit_customize_chroot;;
+			6)	rootdir # Never comment this options
+				step6=1  # This step is done, user can choose install the system
+				;; 
+			7)	install_system;;	
+			8)	echo_info " Exiting"
+				exit;;
+			*) echo_retry " Please enter a number between 1-8: "
+		esac
+		echo_display " Press enter to return to the Main menu"
+		read enter
+	fi 
+done
+}
+
+select_list(){
+	check_editor
+	pac_list=$(ls "$pac_conf"/"$config_dir"/package_list/)
+	echo_info " File named repo_* concerns the packages provides by repositories defined in pacman.conf"
+	echo_info " File named aur_* concerns the packages from AUR"
+	echo_display " Select the list you want to edit :"
+	select list in $pac_list; do
+		if check_elements "$list" $pac_list; then
+			"$editor" "$pac_conf"/"$config_dir"/package_list/"$list"
+		break
+		else 
+			echo_retry " Invalid number, retry :"
+		fi
+	done
+}
+install_system(){
+
+user_tmp
+create_dir
+mount_dir
+
+##		Copying file needed
+
+echo_info " Copy needed file in ${newroot}"
+cp /etc/resolv.conf "$newroot"/etc/resolv.conf || die " Impossible to copy the file resolv.conf"
+cp "$customize_chroot"/"$config_dir"/customizeChroot "$newroot"/etc/customizeChroot || die " ${customize_chroot} do not exist"
+
+##		Sync database
+
+echo_info " Synchronize database and check needed packages"
+pacman -r "$newroot" -Syy --config "$pac_conf"/"$config_dir"/pacman.conf || die " Impossible to synchronize database"
+check_pac_needed
+
+##		Install packages
+
+echo_info " Install packages from lists"
+pac_install || die " Impossible to install packages" 
+aur_install || die " Impossible to install packages"
+
+echo_info " Generate fstab"
+genfstab -p "$newroot" >> "$newroot"/etc/fstab || die " Impossible to generate fstab"
+echo_info " Copying configuration files in ${newroot}"
+cp -af `pwd`/config/"$config_dir"/rootfs/* "$newroot"/ || die " Impossible to copy files"
+
+##		Customize newroot
+
+echo_info " Enter in chroot of ${newroot}"
+chroot "$newroot" /etc/customizeChroot || die " Failed to enter in : ${newroot} or Failed to execute correctly the file"
+
 }
