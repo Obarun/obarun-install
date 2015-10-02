@@ -20,19 +20,19 @@ bblue=${bold}$(tput setaf 4)
 
 ## 		Some variables
 
-config_dir=""
-newroot=""
+editor="mcedit"
+config_dir="obarun"
+newroot="/mnt"
 pacmanEdit=""
+cache_dir=""
 arch_list=""
 aur_list=""
 edit_custom=""
-archlist=`pwd`/config
-aurlist=`pwd`/config
-pac_conf=`pwd`/config
-customize_chroot=`pwd`/config
-
+gen_dir=`pwd`/config
+file_mounted=""
 
 ## 		Information display by the script 
+
 echo_bold(){
 	echo "${bold}${1}${reset}"
 }
@@ -75,7 +75,7 @@ check_elements(){
 ## 		Select, check editor
 
 select_editor(){
-	editors_list=("nano" "vi");
+	editors_list=("nano" "vi" "mcedit");
 	echo_display " Select your editor :"
 	select editor in "${editors_list[@]}"; do
 		if check_elements "$editor" "${editors_list[@]}"; then
@@ -89,9 +89,7 @@ select_editor(){
 
 check_editor(){
 	if [[ "$editor" == "" ]]; then
-		echo_info " You need first to define your editor"
-		echo_info " Please choose step 1 in the Main menu" 
-		(sleep 3) && main_menu
+		editor="mcedit"
 	fi
 }
 
@@ -111,18 +109,26 @@ choose_dir(){
 	echo_valid " You chose $config_dir"
 }
 
+##		Choose cache directory for pacman
+
+choose_cache(){
+	echo_display " Enter the path for your own cache directory"
+	read cache_dir
+	echo_valid " Your cache directory is now : $cache_dir"
+}
+
 ## 		Edit pacman.conf
 
 edit_pacman(){
 	check_editor
-	"$editor" "$pac_conf"/"$config_dir"/pacman.conf		
+	"$editor" "$gen_dir"/"$config_dir"/pacman.conf		
 }
 
 ## 		Edit customizeChroot file
 
 edit_customize_chroot(){
 	check_editor
-	"$editor" "$customize_chroot"/"$config_dir"/customizeChroot
+	"$editor" "$gen_dir"/"$config_dir"/customizeChroot
 }
 
 ## 		Create temporary users for yaourt
@@ -152,6 +158,15 @@ rem_usertmp(){
 ## 		Clean on exit
 
 clean_install(){
+	check_mounted
+	if [[ "$file_mounted" != "" ]]; then
+		echo_info " Umount filesystem in $newroot"
+		umount -R /mnt/{proc,sys,dev,tmp,run}
+	fi
+	if [[ $(ls $newroot) != "" ]]; then 
+		echo_info " Removing directories created"
+		rm -r "$newroot"/{dev,etc,proc,sys,tmp,var,run}
+	fi
 	if [[ $(awk -F':' '{ print $1}' /etc/passwd | grep usertmp) >/dev/null ]]; then
 		rem_usertmp
 	else
@@ -183,13 +198,13 @@ rootdir(){
 check_pac_needed(){
 	if [[ ! $(pacman -Qs arch-install-scripts) >/dev/null ]]; then
 		echo_info " Installing arch-install-scripts"
-		pacman -S arch-install-scripts --config "$pac_conf"/"$config_dir"/pacman.conf || die " Impossible to install the package arch-install-scripts"
+		pacman -S arch-install-scripts --config "$gen_dir"/"$config_dir"/pacman.conf || die " Impossible to install the package arch-install-scripts"
 	else
 		echo_valid " arch-install-scripts : already installed"
 	fi
 	if [[ ! $(pacman -Qs yaourt) >/dev/null ]]; then
 		echo_info " Installing yaourt"
-		pacman -S base-devel package-query yaourt --config "$pac_conf"/"$config_dir"/pacman.conf || die " Impossible to install the package arch-install-scripts"
+		pacman -S base-devel package-query yaourt --config "$gen_dir"/"$config_dir"/pacman.conf || die " Impossible to install the package arch-install-scripts"
 	else
 		echo_valid " yaourt : already installed"
 	fi
@@ -198,36 +213,56 @@ check_pac_needed(){
 ## 		Install packages with pacman
 
 pac_install(){
-	pacman -r "$newroot" -S $(grep -h -v ^# $archlist/$config_dir/package_list/repo_*) --config "$pac_conf"/"$config_dir"/pacman.conf || die " Failed to install packages"
+	if [[ "$cache_dir" = "" ]]; then
+		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*) --config "$gen_dir"/"$config_dir"/pacman.conf || die " Failed to install packages"
+	else
+		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*) --config "$gen_dir"/"$config_dir"/pacman.conf --cachedir "$cache_dir" || die " Failed to install packages"
+	fi
 }
 
 ## 		Install package from aur
 
 aur_install(){
-	sudo -u usertmp yaourt -r "$newroot" -Sy $(grep -h -v ^# $aurlist/$config_dir/package_list/aur_*) || die " Failed to install packages"
+	sudo -u usertmp yaourt -r "$newroot" -Sy $(grep -h -v ^# $gen_dir/$config_dir/package_list/aur_*) || die " Failed to install packages"
 }
 	
 ## 		Create needed directory
 
 create_dir(){
-	echo_info " Create needed directory in ${newroot}"
-	mkdir -m 0755 -p "$newroot"/var/{cache/pacman/pkg,lib/pacman,log} "$newroot"/{dev,run,etc}
-	mkdir -m 0755 -p "$newroot"/dev/{pts,shm}
-	mkdir -m 1777 -p "$newroot"/tmp
-	mkdir -m 0555 -p "$newroot"/{sys,proc}
+	if [[ $(ls $newroot) = "" ]]; then 
+		echo_info " Create needed directory in ${newroot}"
+		mkdir -m 0755 -p "$newroot"/var/{cache/pacman/pkg,lib/pacman,log} "$newroot"/{dev,run,etc}
+		mkdir -m 0755 -p "$newroot"/dev/{pts,shm}
+		mkdir -m 1777 -p "$newroot"/tmp
+		mkdir -m 0555 -p "$newroot"/{sys,proc}
+	else
+		echo_info " Directory needed already exists"
+	fi
 }
-
+check_mounted(){
+	file_mounted=$(mount | grep "$newroot")
+}
 ## 		Mounting necessary directory
 
 mount_dir(){
-	echo_info " Mounting filesystem in ${newroot}"
-	mount -o nosuid,noexec,nodev -t proc proc "$newroot"/proc
-	mount -o nosuid,noexec,nodev -t sysfs sys "$newroot"/sys 
-	mount -o mode=0755,nosuid -t devtmpfs udev "$newroot"/dev 
-	mount -o mode=0620,gid=5,nosuid,noexec -t devpts devpts "$newroot"/dev/pts 
-	mount -o mode=1777,nosuid,nodev -t tmpfs shm "$newroot"/dev/shm 
-	mount -o nosuid,nodev,mode=0755 -t tmpfs run "$newroot"/run 
-	mount -o mode=1777,strictatime,nodev,nosuid -t tmpfs tmp "$newroot"/tmp 
+	check_mounted
+	if [[ $(mountpoint "$newroot" | grep not) != "" ]]; then
+			echo_retry " This is not a valid mountpoint"
+			echo_retry " You need to mount a device on $newroot or choose another directory"
+			(sleep 4) && echo_info " Returning to the main_menu" && (sleep 1) && main_menu
+	fi
+	if [[ "$file_mounted" = "" ]]; then
+		echo_info " Mounting filesystem in ${newroot}"
+		mount -o nosuid,noexec,nodev -t proc proc "$newroot"/proc
+		mount -o nosuid,noexec,nodev -t sysfs sys "$newroot"/sys 
+		mount -o mode=0755,nosuid -t devtmpfs udev "$newroot"/dev 
+		mount -o mode=0620,gid=5,nosuid,noexec -t devpts devpts "$newroot"/dev/pts 
+		mount -o mode=1777,nosuid,nodev -t tmpfs shm "$newroot"/dev/shm 
+		mount -o nosuid,nodev,mode=0755 -t tmpfs run "$newroot"/run 
+		mount -o mode=1777,strictatime,nodev,nosuid -t tmpfs tmp "$newroot"/tmp 
+	else
+		echo_info " Filesystem already mounted in ${newroot}"
+	fi
 }
 
 ## 		Main menu
@@ -243,65 +278,53 @@ while [[ "$step" !=  10 ]]; do
 	echo_bold "*****************************************"
 	echo_bold "              Main menu"
 	echo_bold "*****************************************"
+	echo_bold " Assumptions :"
+	echo_bold "		- User has partitioned, formatted, and mounted partitions on a directory"
+	echo_bold "		- Network is functional"
+	echo_bold "		- A valid mirror appears in /etc/pacman.d/mirrorlist"
+	echo_bold "		- Defaults for the options are specified in brackets"
 	echo_bold ""
 	echo_bold ""
-	echo_bold " 1  -  Select Editor"
-	echo_bold " 2  -  Choose the directory contening configuration files"
+	echo_bold " 1  -  Select Editor [mcedit]"
+	echo_bold " 2  -  Choose the directory contening configuration files [obarun]"
 	echo_bold " 3  -  Edit the pacman.conf used by the script"
-	echo_bold " 4  -  Edit the packages lists (AUR including) from repo defined in pacman.conf"
-	echo_bold " 5  -  Edit the scripts which configure the fresh installation"
-	echo_bold " 6  -  Enter your root directory of the installation"
-	echo_bold " 7  -  Install the new system"
-	echo_bold " 8  -  Exit installation script"
+	echo_bold " 4  -  Define your own cache directory for pacman [host]"
+	echo_bold " 5  -  Edit the packages lists (AUR including) from repo defined in pacman.conf"
+	echo_bold " 6  -  Edit the scripts which configure the fresh installation"
+	echo_bold " 7  -  Enter your root directory of the installation [/mnt]"
+	echo_bold " 8  -  Install the new system"
+	echo_bold " 9  -  Exit installation script"
 	echo_bold ""
 	echo_bold ""
 	echo_display " Enter your choice :";read  step
-	
-	## 			Define new root before install
-	if [[ "$step" == 7 ]] && [[ "$step" >/dev/null ]]; then
-		echo_info " You need to define the directory contening configuration files before install the system (step 2)"
-		echo_display " Press enter to return to the Main menu"
-		read enter
-		step=100
-		main_menu
-	fi
-	if [[ "$step" == 7 ]] && [[ "$step6" >/dev/null ]]; then
-		echo_info " You need to define root directory before install the system (step 6)"
-		echo_display " Press enter to return to the Main menu"
-		read enter
-		step=100
-		main_menu
-	else
 
 		case "$step" in 
 			1)	select_editor;;
 			2)	choose_dir;; # Never comment this options
 			3)	edit_pacman;;
-			4)	select_list;;
-			5)	edit_customize_chroot;;
-			6)	rootdir # Never comment this options
-				step6=1  # This step is done, user can choose install the system
-				;; 
-			7)	install_system;;	
-			8)	echo_info " Exiting"
+			4)	choose_cache;;
+			5)	select_list;;
+			6)	edit_customize_chroot;;
+			7)	rootdir;; # Never comment this options
+			8)	install_system;;	
+			9)	echo_info " Exiting"
 				exit;;
-			*) echo_retry " Please enter a number between 1-8: "
+			*) echo_retry " Please enter a number between 1-9: "
 		esac
 		echo_display " Press enter to return to the Main menu"
-		read enter
-	fi 
+		read enter 
 done
 }
 
 select_list(){
 	check_editor
-	pac_list=$(ls "$pac_conf"/"$config_dir"/package_list/)
+	pac_list=$(ls "$gen_dir"/"$config_dir"/package_list/)
 	echo_info " File named repo_* concerns the packages provides by repositories defined in pacman.conf"
 	echo_info " File named aur_* concerns the packages from AUR"
 	echo_display " Select the list you want to edit :"
 	select list in $pac_list; do
 		if check_elements "$list" $pac_list; then
-			"$editor" "$pac_conf"/"$config_dir"/package_list/"$list"
+			"$editor" "$gen_dir"/"$config_dir"/package_list/"$list"
 		break
 		else 
 			echo_retry " Invalid number, retry :"
@@ -318,12 +341,12 @@ mount_dir
 
 echo_info " Copy needed file in ${newroot}"
 cp /etc/resolv.conf "$newroot"/etc/resolv.conf || die " Impossible to copy the file resolv.conf"
-cp "$customize_chroot"/"$config_dir"/customizeChroot "$newroot"/etc/customizeChroot || die " ${customize_chroot} do not exist"
+cp "$gen_dir"/"$config_dir"/customizeChroot "$newroot"/etc/customizeChroot || die " File customizeChroot not exist"
 
 ##		Sync database
 
 echo_info " Synchronize database and check needed packages"
-pacman -r "$newroot" -Syy --config "$pac_conf"/"$config_dir"/pacman.conf || die " Impossible to synchronize database"
+pacman -r "$newroot" -Syy --config "$gen_dir"/"$config_dir"/pacman.conf || die " Impossible to synchronize database"
 check_pac_needed
 
 ##		Install packages
