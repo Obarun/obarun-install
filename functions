@@ -163,10 +163,6 @@ clean_install(){
 		echo_info " Umount filesystem in $newroot"
 		umount -R /mnt/{proc,sys,dev,tmp,run}
 	fi
-	if [[ $(ls $newroot) != "" ]]; then 
-		echo_info " Removing directories created"
-		rm -r "$newroot"/*
-	fi
 	if [[ $(awk -F':' '{ print $1}' /etc/passwd | grep usertmp) >/dev/null ]]; then
 		rem_usertmp
 	else
@@ -240,7 +236,7 @@ create_dir(){
 	fi
 }
 check_mounted(){
-	file_mounted=$(mount | grep "$newroot")
+	file_mounted=$(mount | grep "$newroot"/proc)
 }
 ## 		Mounting necessary directory
 
