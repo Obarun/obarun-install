@@ -210,16 +210,16 @@ check_pac_needed(){
 
 pac_install(){
 	if [[ "$cache_dir" = "" ]]; then
-		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*) --config "$gen_dir"/"$config_dir"/pacman.conf || die " Failed to install packages"
+		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*) --config "$gen_dir"/"$config_dir"/pacman.conf --noconfirm || die " Failed to install packages"
 	else
-		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*) --config "$gen_dir"/"$config_dir"/pacman.conf --cachedir "$cache_dir" || die " Failed to install packages"
+		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*) --config "$gen_dir"/"$config_dir"/pacman.conf --cachedir "$cache_dir" --noconfirm || die " Failed to install packages"
 	fi
 }
 
 ## 		Install package from aur
 
 aur_install(){
-	sudo -u usertmp yaourt -r "$newroot" -Sy $(grep -h -v ^# $gen_dir/$config_dir/package_list/aur_*) || die " Failed to install packages"
+	sudo -u usertmp yaourt -r "$newroot" -Sy $(grep -h -v ^# $gen_dir/$config_dir/package_list/aur_*) --noconfirm || die " Failed to install packages"
 }
 	
 ## 		Create needed directory
