@@ -165,7 +165,7 @@ clean_install(){
 	fi
 	if [[ $(ls $newroot) != "" ]]; then 
 		echo_info " Removing directories created"
-		rm -r "$newroot"/{dev,etc,proc,sys,tmp,var,run}
+		rm -r "$newroot"/*
 	fi
 	if [[ $(awk -F':' '{ print $1}' /etc/passwd | grep usertmp) >/dev/null ]]; then
 		rem_usertmp
@@ -229,7 +229,7 @@ aur_install(){
 ## 		Create needed directory
 
 create_dir(){
-	if [[ $(ls $newroot) = "" ]]; then 
+	if [[ $(ls $newroot | grep proc) = "" ]]; then 
 		echo_info " Create needed directory in ${newroot}"
 		mkdir -m 0755 -p "$newroot"/var/{cache/pacman/pkg,lib/pacman,log} "$newroot"/{dev,run,etc}
 		mkdir -m 0755 -p "$newroot"/dev/{pts,shm}
