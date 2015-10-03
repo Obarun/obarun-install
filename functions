@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/sh
 ## This script is under license BEER-WARE.
 # "THE BEER-WARE LICENSE" (Revision 42):
 # <eric@obarun.org> wrote this file.  As long as you retain this notice you
@@ -235,18 +235,26 @@ create_dir(){
 		echo_info " Directory needed already exists"
 	fi
 }
-check_mounted(){
-	file_mounted=$(mount | grep "$newroot"/proc)
-}
-## 		Mounting necessary directory
 
-mount_dir(){
-	check_mounted
-	if [[ $(mountpoint "$newroot" | grep not) != "" ]]; then
+##		check if $newroot is a valid mountpoint
+
+check_mountpoint(){
+	if ! mountpoint -q "$newroot"; then
 			echo_retry " This is not a valid mountpoint"
 			echo_retry " You need to mount a device on $newroot or choose another directory"
 			(sleep 4) && echo_info " Returning to the main_menu" && (sleep 1) && main_menu
 	fi
+}
+##		Already mounted or not
+
+check_mounted(){
+	file_mounted=$(mount | grep "$newroot"/proc)
+}
+
+## 		Mounting necessary directory
+
+mount_dir(){
+	check_mounted
 	if [[ "$file_mounted" = "" ]]; then
 		echo_info " Mounting filesystem in ${newroot}"
 		mount -o nosuid,noexec,nodev -t proc proc "$newroot"/proc
@@ -328,10 +336,11 @@ select_list(){
 	done
 }
 install_system(){
-
-user_tmp
+	
+check_mountpoint
 create_dir
 mount_dir
+user_tmp
 
 ##		Copying file needed
 
