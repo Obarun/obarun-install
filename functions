@@ -219,7 +219,7 @@ pac_install(){
 ## 		Install package from aur
 
 aur_install(){
-	sudo -u usertmp yaourt -r "$newroot" -Sy $(grep -h -v ^# $gen_dir/$config_dir/package_list/aur_*) --noconfirm || die " Failed to install packages"
+	sudo -u usertmp yaourt -r "$newroot" -Sy $(grep -h -v ^# $gen_dir/$config_dir/package_list/aur_*) || die " Failed to install packages"
 }
 	
 ## 		Create needed directory

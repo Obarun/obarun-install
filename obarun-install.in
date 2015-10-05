@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/sh
 # This script is under license BEER-WARE
 # "THE BEER-WARE LICENSE" (Revision 42):
 # <eric@obarun.org> wrote this file.  As long as you retain this notice you
@@ -13,17 +13,18 @@
 
 shopt -s extglob
 
-##		Clean before exit
-
-trap "clean_install" EXIT ERR QUIT KILL STOP INT
-
 ##		Check is the functions file exits
 
 if [[ -f `pwd`/functions ]]; then
   source functions
 else
-  die "${bred}==>> Missing file : functions${reset}"
+  echo "==>> Missing file : functions"
+  exit	
 fi
+
+##		Clean before exit
+
+trap "clean_install" EXIT ERR QUIT KILL STOP INT
 
 ##		Must be root user 
 
