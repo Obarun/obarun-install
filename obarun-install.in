@@ -16,7 +16,7 @@ shopt -s extglob
 ##		Check is the functions file exits
 
 if [[ -f `pwd`/functions ]]; then
-  source `pwd`/functions
+  source functions
 else
   echo "==>> Missing file : functions"
   exit	

@@ -10,7 +10,7 @@ license=('BEERWARE')
 depends=('arch-install-scripts' 'mc' 'yaourt')
 backup=()
 install=
-source=("obarun-install::git+https://github.com/Obarun/obarun-install#tag=v0.2.8")
+source=("obarun-install::git+https://github.com/Obarun/obarun-install#tag=v0.3.2")
 md5sums=('SKIP')
 
 
