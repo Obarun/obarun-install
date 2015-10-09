@@ -1,7 +1,7 @@
 # Maintainer: Eric Vidal <eric@obarun.org>
 
 pkgname=obarun-install
-pkgver=0.3.3
+pkgver=0.3.4
 pkgrel=1
 pkgdesc=" Script for automatic installation"
 arch=(x86_64)
@@ -10,7 +10,7 @@ license=('BEERWARE')
 depends=('arch-install-scripts' 'mc' 'yaourt')
 backup=()
 install=
-source=("obarun-install::git+https://github.com/Obarun/obarun-install#tag=v0.3.3")
+source=("obarun-install::git+https://github.com/Obarun/obarun-install#tag=v0.3.4")
 md5sums=('SKIP')
 
 
