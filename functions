@@ -440,12 +440,6 @@ define_root(){
 		echo_info " Removing auto-login for root"
 		rm "$newroot/root/.zlogin"
 	fi
-	if [[ -e "$newroot/root/.xinitrc" ]]; then
-		local locale_xinit
-		locale_xinit=$(grep -v "#" $newroot/etc/locale.gen | sed 's/ UTF-8//g' | awk -F "_" '{ print $1 }')
-		sed -i 's/#setxkbmap.*$/setxkbmap\ '$locale_xinit'\ \&/g' /root/.xinitrc
-		sed -i 's/setxkbmap.*$/setxkbmap\ '$locale_xinit'\ \&/g' /root/.xinitrc
-	fi
 }
 
 pass_root(){
