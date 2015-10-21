@@ -1,8 +1,8 @@
 # Maintainer: Eric Vidal <eric@obarun.org>
 
 pkgname=obarun-install
-pkgver=0.3.4
-pkgrel=1
+pkgver=0.4
+pkgrel=2
 pkgdesc=" Script for automatic installation"
 arch=(x86_64)
 url=("https://github.com/Obarun/obarun-install")
