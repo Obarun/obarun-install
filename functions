@@ -24,12 +24,19 @@ editor="mcedit"
 config_dir="obarun"
 newroot="/mnt"
 pacmanEdit=""
-cache_dir=""
-arch_list=""
-aur_list=""
-edit_custom=""
+cache_dir="/var/cache/pacman/pkg"
 gen_dir=`pwd`/config
 file_mounted=""
+newuser=""
+zone=""
+subzone=""
+hostname=""
+locale="" 
+locale_rc=""
+pack=0
+yaourt_cache="$newroot/var/cache/pacman/pkg/yaourt"
+tmp_yaourt="$yaourt_cache/tmp/"
+enter_count=0
 
 ## 		Information display by the script 
 
@@ -66,6 +73,84 @@ die (){
       exit 1
 }
 
+## 		Clean on exit
+
+clean_install(){
+	check_mounted
+	if [[ "$file_mounted" != "" ]]; then
+		echo_info " Umount filesystem in $newroot"
+		umount -R /mnt/{proc,sys,dev,tmp,run}
+	fi
+	if [[ $(awk -F':' '{ print $1}' /etc/passwd | grep usertmp) >/dev/null ]]; then
+		echo_info " Removing user usertmp"
+		rem_usertmp
+	fi
+	if [[ -e /etc/yaourtrc.ori.obarun ]]; then
+		mv /etc/yaourtrc.ori.obarun /etc/yaourtrc
+	fi
+	if [[  -e "$newroot/etc/functions" ]]; then
+		rm "$newroot/etc/functions" || die "File functions not exist"
+	fi
+	if [[  -e "$newroot/etc/customizeChroot" ]]; then
+		rm "$newroot/etc/customizeChroot" || die " File customizeChroot not exist"
+	fi
+	exit
+}
+
+rem_usertmp(){
+	echo_info " Removing user : usertmp"
+	userdel -r usertmp
+	sed -i '/usertmp/d' /etc/sudoers
+}
+
+## 		Create needed directory
+
+create_dir(){
+	if [[ $(ls $newroot | grep proc) = "" ]]; then 
+		echo_info " Create needed directory in ${newroot}"
+		mkdir -m 0755 -p "$newroot"/var/{cache/pacman/pkg,lib/pacman,log} "$newroot"/{dev,run,etc}
+		mkdir -m 0755 -p "$newroot"/dev/{pts,shm}
+		mkdir -m 1777 -p "$newroot"/tmp
+		mkdir -m 0555 -p "$newroot"/{sys,proc}
+	else
+		echo_valid " Directory needed already exists"
+	fi
+}
+
+##		check if $newroot is a valid mountpoint
+
+check_mountpoint(){
+	if ! mountpoint -q "$newroot"; then
+			echo_retry " This is not a valid mountpoint"
+			echo_retry " You need to mount a device on $newroot or choose another directory"
+			(sleep 4) && echo_info " Returning to the main_menu" && (sleep 1) && main_menu
+	fi
+}
+
+##		Already mounted or not
+
+check_mounted(){
+	file_mounted=$(mount | grep "$newroot"/proc)
+}
+
+## 		Mounting necessary directory
+
+mount_dir(){
+	check_mounted
+	if [[ "$file_mounted" = "" ]]; then
+		echo_info " Mounting filesystem in ${newroot}"
+		mount -o nosuid,noexec,nodev -t proc proc "$newroot"/proc
+		mount -o nosuid,noexec,nodev -t sysfs sys "$newroot"/sys 
+		mount -o mode=0755,nosuid -t devtmpfs dev "$newroot"/dev 
+		mount -o mode=0620,gid=5,nosuid,noexec -t devpts devpts "$newroot"/dev/pts 
+		mount -o mode=1777,nosuid,nodev -t tmpfs shm "$newroot"/dev/shm 
+		mount -o nosuid,nodev,mode=0755 -t tmpfs run "$newroot"/run 
+		mount -o mode=1777,strictatime,nodev,nosuid -t tmpfs tmp "$newroot"/tmp 
+	else
+		echo_valid " Filesystem already mounted in ${newroot}"
+	fi
+}
+
 ## 		Check list option
 
 check_elements(){
@@ -100,7 +185,9 @@ choose_dir(){
 	echo_display " Select the directory you want to use :"
 	select dir in $dir_list; do
 		if check_elements "$dir" $dir_list; then
-			config_dir="$dir"	 
+			config_dir="$dir"
+			sed -i "s,EXPORTDIR=\".*$,EXPORTDIR=\"$yaourt_cache\/\",g" $gen_dir/$config_dir/yaourtrc
+			sed -i "s,TMPDIR=\".*$,TMPDIR=\"$yaourt_cache\/tmp\/\",g" $gen_dir/$config_dir/yaourtrc 	 
 		break
 		else 
 			echo_retry " Invalid number, retry :"
@@ -114,6 +201,14 @@ choose_dir(){
 choose_cache(){
 	echo_display " Enter the path for your own cache directory"
 	read cache_dir
+	while [[ ! -d "$cache_dir" ]]; do
+		echo_retry " $cache_dir is not a directory, please retry:"
+		read cache_dir
+	done
+	while [[ $(ls $cache_dir | grep "pkg.tar.xz") = "" ]]; do
+		echo_retry " Is not a valid directory for pacman, please retry:"
+		read cache_dir
+	done
 	echo_valid " Your cache directory is now : $cache_dir"
 }
 
@@ -121,14 +216,14 @@ choose_cache(){
 
 edit_pacman(){
 	check_editor
-	"$editor" "$gen_dir"/"$config_dir"/pacman.conf		
+	"$editor" "$gen_dir/$config_dir/pacman.conf"		
 }
 
 ## 		Edit customizeChroot file
 
 edit_customize_chroot(){
 	check_editor
-	"$editor" "$gen_dir"/"$config_dir"/customizeChroot
+	"$editor" "$gen_dir/$config_dir/customizeChroot"
 }
 
 ## 		Create temporary users for yaourt
@@ -148,27 +243,6 @@ user_tmp(){
 	fi
 }
 
-##		Delete usertmp
-
-rem_usertmp(){
-	echo_info " Removing user : usertmp"
-	userdel -r usertmp
-	sed -i '/usertmp/d' /etc/sudoers
-}
-## 		Clean on exit
-
-clean_install(){
-	check_mounted
-	if [[ "$file_mounted" != "" ]]; then
-		echo_info " Umount filesystem in $newroot"
-		umount -R /mnt/{proc,sys,dev,tmp,run}
-	fi
-	if [[ $(awk -F':' '{ print $1}' /etc/passwd | grep usertmp) >/dev/null ]]; then
-		rem_usertmp
-	else
-	exit
-	fi
-}
 		
 ## 		Select root directory
 
@@ -183,7 +257,7 @@ rootdir(){
 	
 	while ! mountpoint -q "$newroot"; do
 		echo_retry " This is not a valide mountpoint, please retry :"
-		rootdir
+		read newroot
 	done
 	
 	echo_valid " Your root directory for installation is now : $newroot"
@@ -194,94 +268,206 @@ rootdir(){
 check_pac_needed(){
 	if [[ ! $(pacman -Qs arch-install-scripts) >/dev/null ]]; then
 		echo_info " Installing arch-install-scripts"
-		pacman -S arch-install-scripts --config "$gen_dir"/"$config_dir"/pacman.conf || die " Impossible to install the package arch-install-scripts"
+		pacman -S arch-install-scripts --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to install the package arch-install-scripts"
 	else
 		echo_valid " arch-install-scripts : already installed"
 	fi
 	if [[ ! $(pacman -Qs yaourt) >/dev/null ]]; then
 		echo_info " Installing yaourt"
-		pacman -S base-devel package-query yaourt --config "$gen_dir"/"$config_dir"/pacman.conf || die " Impossible to install the package arch-install-scripts"
+		pacman -S base-devel package-query yaourt --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to install the package arch-install-scripts"
 	else
 		echo_valid " yaourt : already installed"
 	fi
 }
 
+##		Select packages list
+
+select_list(){
+	check_editor
+	pac_list=$(ls "$gen_dir"/"$config_dir"/package_list/ | grep -v "yaourt_cache")
+	pac_list+=" Exit"
+	echo_info " File named repo_* concerns the packages provides by repositories defined in pacman.conf"
+	echo_info " File named aur_* concerns the packages from AUR"
+	echo_display " Select the list you want to edit then select Exit number to return at main menu :"
+	select list in $pac_list; do
+		case "$list" in
+			Exit)break;;
+			*)if check_elements "$list" $pac_list; then
+				"$editor" "$gen_dir/$config_dir/package_list/$list"
+			  else 
+				echo_retry " Invalid number, retry :"
+			  fi
+		esac
+	done
+}
+
 ## 		Install packages with pacman
 
 pac_install(){
-	if [[ "$cache_dir" = "" ]]; then
-		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*) --config "$gen_dir"/"$config_dir"/pacman.conf --noconfirm || die " Failed to install packages"
-	else
-		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*) --config "$gen_dir"/"$config_dir"/pacman.conf --cachedir "$cache_dir" --noconfirm || die " Failed to install packages"
-	fi
+		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*) --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm || die " Failed to install packages"
 }
 
 ## 		Install package from aur
 
 aur_install(){
-	sudo -u usertmp yaourt -r "$newroot" -Sy $(grep -h -v ^# $gen_dir/$config_dir/package_list/aur_*) || die " Failed to install packages"
+	if [[ ! -d "$newroot/var/lib/pacman/sync" ]]; then 
+		sync="y"
+	else
+		sync=""
+	fi
+	if [[ ! -d "$yaourt_cache" ]]; then
+		mkdir -p -m777  "$yaourt_cache"
+		mkdir -p -m777 "$tmp_yaourt"
+	fi
+	if [[ ! -e /etc/yaourtrc.ori.obarun ]]; then
+		if [[ -e /etc/yaourtrc ]]; then
+			mv /etc/yaourtrc /etc/yaourtrc.ori.obarun
+		fi
+		cp "$gen_dir/$config_dir/yaourtrc" /etc/yaourtrc || die " yaourtrc file not exist"
+		sed -i "s,#TMPDIR=\".*$,TMPDIR=\"$tmp_yaourt\",g" /etc/yaourtrc
+		sed -i "s,#EXPORTDIR=\".*$,EXPORTDIR=\"$yaourt_cache\",g" /etc/yaourtrc
+		sed -i "s,#EXPORT=.*$,EXPORT=1,g" /etc/yaourtrc
+		sed -i "s,TMPDIR=\".*$,TMPDIR=\"$tmp_yaourt\",g" /etc/yaourtrc
+		sed -i "s,EXPORTDIR=\".*$,EXPORTDIR=\"$yaourt_cache\",g" /etc/yaourtrc
+		sed -i "s,EXPORT=.*$,EXPORT=1,g" /etc/yaourtrc
+	fi	
+	aur_cache
+}
+
+aur_cache(){
+	local y_cache
+	ls -1 -p $yaourt_cache/ | grep -v '/$' | grep -v "gz" | sed 's/-[0-9]/ = /g' | awk -F "=" '{ print $1 }' > $yaourt_cache/tmplist
+	y_cache=$(cat $gen_dir/$config_dir/package_list/aur_* | grep -v "#" | sed  '/^ *$/d')
+	for i in $y_cache;do
+		if [[ $(sed -n '1,$p' "$i" 2&>/dev/null | grep "$i" $yaourt_cache/tmplist) != "" ]]; then
+			sudo -u usertmp yaourt -r "$newroot" -U"$sync" "$yaourt_cache"/$i*.xz --noconfirm || die " Failed to install packages"
+		else
+			sudo -u usertmp yaourt -r "$newroot" -S"$sync" "$i" --noconfirm || die " Failed to install packages"
+		fi
+	done
+}
+
+##		Copying file needed
+
+copy_file(){
+	echo_info " Copy needed file in ${newroot}"
+	if [[  ! -e "$newroot/etc/resolv.conf" ]]; then 
+		cp /etc/resolv.conf "$newroot/etc/resolv.conf" || die " Impossible to copy the file resolv.conf"
+	else
+		echo_valid " File resolv.cong already exist"
+	fi
+	if [[ ! -e "$newroot/etc/functions" ]]; then
+		cp "`pwd`/functions" "$newroot/etc/functions" || die "File functions not exist"
+	else
+		echo_valid " File functions already exist"
+	fi
+	if [[ ! -e "$newroot/etc/customizeChroot" ]]; then
+		cp "$gen_dir/$config_dir/customizeChroot" "$newroot/etc/customizeChroot" || die " File customizeChroot not exist"
+	else
+		echo_valid " File customizeChroot already exist"
+	fi
 }
 	
-## 		Create needed directory
+##		Sync database
 
-create_dir(){
-	if [[ $(ls $newroot | grep proc) = "" ]]; then 
-		echo_info " Create needed directory in ${newroot}"
-		mkdir -m 0755 -p "$newroot"/var/{cache/pacman/pkg,lib/pacman,log} "$newroot"/{dev,run,etc}
-		mkdir -m 0755 -p "$newroot"/dev/{pts,shm}
-		mkdir -m 1777 -p "$newroot"/tmp
-		mkdir -m 0555 -p "$newroot"/{sys,proc}
+sync_data(){
+	if [[ ! -d "$newroot/var/lib/pacman/sync" ]]; then 
+		echo_info " Synchronize database and check needed packages"
+		pacman -r "$newroot" -Syy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"
 	else
-		echo_info " Directory needed already exists"
+		echo_valid " Database already synchronized"
 	fi
 }
 
-##		check if $newroot is a valid mountpoint
+##		Install packages if pack = 1
 
-check_mountpoint(){
-	if ! mountpoint -q "$newroot"; then
-			echo_retry " This is not a valid mountpoint"
-			echo_retry " You need to mount a device on $newroot or choose another directory"
-			(sleep 4) && echo_info " Returning to the main_menu" && (sleep 1) && main_menu
+install_pack(){
+	if [[ "$pack" == 0 ]]; then
+		echo_info " Install packages from lists"
+		pac_install || die " Impossible to install packages from repository" 
+		aur_install || die " Impossible to install packages from AUR"
 	fi
 }
-##		Already mounted or not
 
-check_mounted(){
-	file_mounted=$(mount | grep "$newroot"/proc)
+##		Generate fstab
+
+gen_fstab(){
+	echo_info " Generate fstab"
+	genfstab -p "$newroot" >> "$newroot/etc/fstab" || die " Impossible to generate fstab"
 }
 
-## 		Mounting necessary directory
+##		Copy directory rootfs in $newroot
 
-mount_dir(){
-	check_mounted
-	if [[ "$file_mounted" = "" ]]; then
-		echo_info " Mounting filesystem in ${newroot}"
-		mount -o nosuid,noexec,nodev -t proc proc "$newroot"/proc
-		mount -o nosuid,noexec,nodev -t sysfs sys "$newroot"/sys 
-		mount -o mode=0755,nosuid -t devtmpfs udev "$newroot"/dev 
-		mount -o mode=0620,gid=5,nosuid,noexec -t devpts devpts "$newroot"/dev/pts 
-		mount -o mode=1777,nosuid,nodev -t tmpfs shm "$newroot"/dev/shm 
-		mount -o nosuid,nodev,mode=0755 -t tmpfs run "$newroot"/run 
-		mount -o mode=1777,strictatime,nodev,nosuid -t tmpfs tmp "$newroot"/tmp 
+copy_rootfs(){
+	echo_info " Copying configuration files in ${newroot}"
+	cp -af `pwd`/config/"$config_dir"/rootfs/* "$newroot"/ || die " Impossible to copy files"
+}
+
+##		Customize newroot
+
+enter_chroot(){
+	echo_info " Enter in chroot of ${newroot}"	
+	if [[ ! -e "$newroot/etc/functions" ]]; then
+		cp "`pwd`/functions" "$newroot/etc/functions" || die "File functions not exist"
 	else
-		echo_info " Filesystem already mounted in ${newroot}"
+		echo_valid " File functions already exist"
+	fi
+	if [[ ! -e "$newroot/etc/customizeChroot" ]]; then
+		cp "$gen_dir/$config_dir/customizeChroot" "$newroot/etc/customizeChroot" || die " File customizeChroot not exist"
+	else
+		echo_valid " File customizeChroot already exist"
+	fi
+	chroot "$newroot" /etc/customizeChroot || die " Failed to enter in ${newroot} or Failed to execute correctly the file"
+}
+
+##		Enter in $newroot with mc
+
+mc_newroot(){
+	mc "$newroot/"
+}
+##		Define root user
+
+define_root(){
+	if [[ ! $(cat $newroot/etc/shadow | grep "root::") == "" ]]; then
+		echo_info " Modify root user"
+		usermod -R "$newroot" -s /usr/bin/zsh root
+		cp -aT "$newroot/etc/skel/" "$newroot/root/"
+		echo_info " You need to define root password"
+		pass_root
+		echo_valid " root user was modified successfully"
+	fi
+	if [[ -e "$newroot/root/.zlogin" ]]; then
+		echo_info " Removing auto-login for root"
+		rm "$newroot/root/.zlogin"
+	fi
+	if [[ -e "$newroot/root/.xinitrc" ]]; then
+		local locale_xinit
+		locale_xinit=$(grep -v "#" $newroot/etc/locale.gen | sed 's/ UTF-8//g' | awk -F "_" '{ print $1 }')
+		sed -i 's/#setxkbmap.*$/setxkbmap\ '$locale_xinit'\ \&/g' /root/.xinitrc
+		sed -i 's/setxkbmap.*$/setxkbmap\ '$locale_xinit'\ \&/g' /root/.xinitrc
 	fi
 }
 
+pass_root(){
+	passwd -R "$newroot" root
+	while [[ $? -ne 0 ]]; do
+		echo_retry " Password do not match, please retry"
+		passwd -R "$newroot" root
+	done
+}
 ## 		Main menu
 
 main_menu(){
 
-step=100
+locale step=100
 
 while [[ "$step" !=  10 ]]; do
 	clear
 	echo_bold ""
 	echo_bold ""
-	echo_bold "*****************************************"
-	echo_bold "              Main menu"
-	echo_bold "*****************************************"
+	echo_bold "***************************************************************************************"
+	echo_bold "                            Main menu"
+	echo_bold "***************************************************************************************"
 	echo_bold " Assumptions :"
 	echo_bold "		- User has partitioned, formatted, and mounted partitions on a directory"
 	echo_bold "		- Network is functional"
@@ -289,18 +475,26 @@ while [[ "$step" !=  10 ]]; do
 	echo_bold "		- Defaults for the options are specified in brackets"
 	echo_bold ""
 	echo_bold ""
-	echo_bold " 1  -  Select Editor [mcedit]"
-	echo_bold " 2  -  Choose the directory contening configuration files [obarun]"
+	echo_bold " 1  -  Select Editor [$editor]"
+	echo_bold " 2  -  Choose the directory contening configuration files [$config_dir]"
 	echo_bold " 3  -  Edit the pacman.conf used by the script"
-	echo_bold " 4  -  Define your own cache directory for pacman [host]"
+	echo_bold " 4  -  Define your own cache directory for pacman [$cache_dir]"
 	echo_bold " 5  -  Edit the packages lists (AUR including) from repo defined in pacman.conf"
-	echo_bold " 6  -  Edit the scripts which configure the fresh installation"
-	echo_bold " 7  -  Enter your root directory of the installation [/mnt]"
-	echo_bold " 8  -  Install the new system"
-	echo_bold " 9  -  Exit installation script"
+	echo_bold " 6  -  Enter your root directory of the installation [$newroot]"
+	echo_bold " 7  -  Install the new system"
+	echo_bold " 8  -  Resume an aborted install (packages are already installed at $newroot)"
+	echo_bold " 9  -  Enter in chroot of ${newroot} and launch the script customizeChroot"
+	echo_bold " 10 -  Exit installation script"
+	echo_bold ""
+	echo_bold "***************************************************************************************"
+	echo_bold "                            Options"
+	echo_bold "***************************************************************************************"
+	echo_bold ""
+	echo_bold " 11 -  Browse $newroot with Midnight Commander"	
+	echo_bold " 12 -  Edit the script customizeChroot which configure the fresh installation"
 	echo_bold ""
 	echo_bold ""
-	echo_display " Enter your choice :";read  step
+	echo_info " Enter your choice :";read  step
 
 		case "$step" in 
 			1)	select_editor;;
@@ -308,66 +502,228 @@ while [[ "$step" !=  10 ]]; do
 			3)	edit_pacman;;
 			4)	choose_cache;;
 			5)	select_list;;
-			6)	edit_customize_chroot;;
-			7)	rootdir;; # Never comment this options
-			8)	install_system;;	
-			9)	echo_info " Exiting"
+			6)	rootdir;; # Never comment this options
+			7)	install_system;;
+			8)	pack=1
+				install_system;;
+			9)	enter_chroot;;
+			10)	echo_info " Exiting"
 				exit;;
-			*) echo_retry " Please enter a number between 1-9: "
+			11) mc_newroot;;
+			12)	edit_customize_chroot;;
+			*) echo_retry " Invalid number, Please retry: "
 		esac
-		echo_display " Press enter to return to the Main menu"
+		echo_info " Press enter to return to the Main menu"
 		read enter 
 done
 }
 
-select_list(){
-	check_editor
-	pac_list=$(ls "$gen_dir"/"$config_dir"/package_list/)
-	echo_info " File named repo_* concerns the packages provides by repositories defined in pacman.conf"
-	echo_info " File named aur_* concerns the packages from AUR"
-	echo_display " Select the list you want to edit :"
-	select list in $pac_list; do
-		if check_elements "$list" $pac_list; then
-			"$editor" "$gen_dir"/"$config_dir"/package_list/"$list"
-		break
-		else 
-			echo_retry " Invalid number, retry :"
-		fi
+##		Start the installation
+
+install_system(){
+	check_mountpoint
+	create_dir
+	mount_dir
+	user_tmp
+	copy_file
+	sync_data
+	check_pac_needed
+	install_pack
+	gen_fstab
+	copy_rootfs
+	define_root
+	pack=0
+}
+
+#####################################		Functions for customizeChroot script
+
+## 		CustomizeChroot menu
+
+customizeChroot_menu(){
+
+locale step=100
+
+while [[ "$step" !=  8 ]]; do
+	clear
+	echo_bold ""
+	echo_bold ""
+	echo_bold "**************************************************************"
+	echo_bold "              CustomizeChroot menu"
+	echo_bold "**************************************************************"
+	echo_bold ""
+	echo_bold " 1  -  Define hostname"
+	echo_bold " 2  -  Define locale"
+	echo_bold " 3  -  Define localtime"
+	echo_bold " 4  -  Create a new user"
+	echo_bold " 5  -  Edit rc.conf file"
+	echo_bold " 6  -  Edit the fresh installation with Midnight Commander"
+	echo_bold " 7  -  Exit customization menu and continue the installation"
+	echo_bold " 8  -  Return to the main menu"
+	echo_bold ""
+	echo_bold ""
+	echo_info " Enter your choice :";read  step
+
+		case "$step" in 
+			1)	define_hostname;;
+			2)	define_locale;; 
+			3)	call_localtime;;
+			4)	define_user;;
+			5)	edit_rc_conf;;
+			6)	mc_enter;;
+			7)	echo_info " Continue installation"
+				break;;
+			8)	exit;;
+			*) echo_retry " Invalid number, please retry:"
+		esac
+		echo_info " Press enter to return to the customizeChroot menu"
+		read enter 
+done
+}
+
+##		Define resolv.conf
+
+define_resolv(){
+	echo_info " Define resolv.conf"
+	if [[ -e /etc/resolv.conf.pacorig ]]; then 
+		mv /etc/resolv.conf.pacorig /etc/resolv.conf
+	fi
+}
+
+
+##		Enter in the fresh installation with mc
+
+mc_enter(){
+	mc /
+}
+
+## 		Define hostname
+
+define_hostname(){
+	if [[ "$hostname" != "" ]]; then
+		sed -i 's/ .*$//' /etc/hosts
+	fi
+	echo_display " Enter your hostname"
+	read hostname
+	sed -i "s/HOSTNAME=\".*$/HOSTNAME=\"$hostname\"/g" /etc/rc.conf
+	echo "$hostname" > /etc/hostname
+	sed -i '/127.0.0.1/s/$/ '$hostname'/' /etc/hosts
+	sed -i '/::1/s/$/ '$hostname'/' /etc/hosts
+	echo_valid " hostname is now : $hostname"
+}
+
+##		Edit rc.conf
+
+edit_rc_conf(){
+	"$editor" /etc/rc.conf
+}
+
+##		Define locale
+
+define_locale(){
+	echo_info " Define your locale by uncomment desired line, only one line is allowed ($editor will be launch in 2 sec)"
+	sleep 02
+	"$editor" /etc/locale.gen
+	locale-gen
+	locale=$(grep -v "#" /etc/locale.gen | awk -F " " '{ print $1 }')
+	echo LANG="$locale" > /etc/locale.conf
+    echo LC_COLLATE=C >> /etc/locale.conf
+	locale_rc=$(grep -v "#" /etc/locale.gen | sed 's/ UTF-8//g' | awk -F "_" '{ print $1 }')
+	sed -i "s,KEYMAP=\".*$,KEYMAP=\"$locale_rc\",g" /etc/rc.conf
+	echo_valid " Locale was created successfully"
+}
+
+##		Define localtime
+
+define_localtime(){
+	zone_list=$(ls -d --group-directories-first /usr/share/zoneinfo/* | awk -F "/usr/share/zoneinfo/" '{ print $2 }' | uniq)
+	zone_list+=" Exit"
+	select zone in $zone_list; do
+		case $zone in 
+			Exit)customizeChroot_menu
+			break;;
+			*)if check_elements "$zone" $zone_list; then
+				if [[  -d "/usr/share/zoneinfo/$zone" ]]; then
+					sub_zone_list=$(ls /usr/share/zoneinfo/$zone/* | awk -F "/usr/share/zoneinfo/$zone/" '{ print $2 }') 
+					sub_zone_list+=" Exit"
+					select subzone in $sub_zone_list; do
+						case $subzone in
+							Exit)define_localtime
+								break;;
+							*)if check_elements "$subzone" $sub_zone_list; then
+								break
+							else
+								echo_retry " Invalid number, retry :"
+							fi
+						esac
+					done
+				fi
+			break	
+			else 
+				echo_retry " Invalid number, retry :"
+			fi
+		esac
 	done
 }
-install_system(){
-	
-check_mountpoint
-create_dir
-mount_dir
-user_tmp
 
-##		Copying file needed
-
-echo_info " Copy needed file in ${newroot}"
-cp /etc/resolv.conf "$newroot"/etc/resolv.conf || die " Impossible to copy the file resolv.conf"
-cp "$gen_dir"/"$config_dir"/customizeChroot "$newroot"/etc/customizeChroot || die " File customizeChroot not exist"
-
-##		Sync database
-
-echo_info " Synchronize database and check needed packages"
-pacman -r "$newroot" -Syy --config "$gen_dir"/"$config_dir"/pacman.conf || die " Impossible to synchronize database"
-check_pac_needed
-
-##		Install packages
-
-echo_info " Install packages from lists"
-pac_install || die " Impossible to install packages" 
-aur_install || die " Impossible to install packages"
-
-echo_info " Generate fstab"
-genfstab -p "$newroot" >> "$newroot"/etc/fstab || die " Impossible to generate fstab"
-echo_info " Copying configuration files in ${newroot}"
-cp -af `pwd`/config/"$config_dir"/rootfs/* "$newroot"/ || die " Impossible to copy files"
-
-##		Customize newroot
-
-echo_info " Enter in chroot of ${newroot}"
-chroot "$newroot" /etc/customizeChroot || die " Failed to enter in : ${newroot} or Failed to execute correctly the file"
-
+call_localtime(){
+	echo_display " Choose your country/department"
+	define_localtime
+	if [[ "$subzone" != "" ]]; then
+		ln -sf /usr/share/zoneinfo/$zone/$subzone /etc/localtime
+		sed -i "s/TIMEZONE=\".*$/TIMEZONE=\"$zone\/$subzone\"/g" /etc/rc.conf
+	else
+		ln -sf /usr/share/zoneinfo/$zone /etc/localtime
+		sed -i "s/TIMEZONE=\".*$/TIMEZONE=\"$zone\"/g" /etc/rc.conf
+	fi
+	echo_valid " your localtime is now : $zone/$subzone"
 }
+
+##		Define a new user
+
+define_user(){
+	echo_display " Enter the name for the user"
+	read newuser
+	while [[ ! $(cat /etc/passwd | grep "$newuser") == "" ]]; do
+		echo_retry " $newuser already exit, please enter another name :"
+		read newuser
+	done
+	while [[ ${#newuser} -eq 0 ]] || [[ $newuser =~ \ |\' ]] || [[ $newuser =~ [^a-z0-9\ ] ]]; do
+		echo_retry " Invalid user name. Please retry :"
+		read newuser
+	done
+	echo_valid " Create user $newuser"
+	useradd -m -g users -G "audio,floppy,log,network,rfkill,scanner,storage,optical,power,wheel,video" -s /usr/bin/zsh "$newuser"
+	if [[ -e /home/$newuser/.xinitrc ]]; then
+		local locale_xinit
+		locale_xinit=$(grep -v "#" /etc/locale.gen | sed 's/ UTF-8//g' | awk -F "_" '{ print $1 }')
+		sed -i 's/#setxkbmap.*$/setxkbmap\ '$locale_xinit'\ \&/g' /home/$newuser/.xinitrc
+		sed -i 's/setxkbmap.*$/setxkbmap\ '$locale_xinit'\ \&/g' /home/$newuser/.xinitrc
+	fi
+	echo_info " You need to define $newuser password"
+	pass_user
+	echo_valid " User $newuser was created successfully" 
+}
+
+pass_user(){
+	passwd "$newuser"
+	while [[ $? -ne 0 ]]; do
+		echo_retry " Password do not match, please retry"
+		passwd "$newuser"
+	done
+}
+
+##		Define a Bootloader
+
+#define_bootloader(){
+	
+#}
+##		Reply functions
+#reply_answer(){
+#	local reply
+#	echo_display " Would you like define your hostname"
+#	read reply
+#	while [[ ! "$reply" = @(y|n) ]]; do
+#		answer
+#		read reply
+#	done
+#}
