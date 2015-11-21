@@ -2,7 +2,7 @@
 
 pkgname=obarun-install
 pkgver=0.4
-pkgrel=3
+pkgrel=4
 pkgdesc=" Script for automatic installation"
 arch=(x86_64)
 url=("https://github.com/Obarun/obarun-install")
