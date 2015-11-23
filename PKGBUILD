@@ -2,7 +2,7 @@
 
 pkgname=obarun-install
 pkgver=0.4
-pkgrel=6
+pkgrel=7
 pkgdesc=" Script for automatic installation"
 arch=(x86_64)
 url=("https://github.com/Obarun/obarun-install")
@@ -10,7 +10,7 @@ license=('BEERWARE')
 depends=('arch-install-scripts' 'mc' 'yaourt')
 backup=()
 install=
-source=("obarun-install::git+https://github.com/Obarun/obarun-install#tag=v0.4.4")
+source=("obarun-install::git+https://github.com/Obarun/obarun-install#tag=v0.4.7")
 md5sums=('SKIP')
 
 
