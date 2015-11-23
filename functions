@@ -224,6 +224,7 @@ edit_pacman(){
 edit_customize_chroot(){
 	check_editor
 	"$editor" "$gen_dir/$config_dir/customizeChroot"
+	cp -f "$gen_dir/$config_dir/customizeChroot" "$newroot/etc/customizeChroot" || die " File customizeChroot not exist"
 }
 
 ## 		Create temporary users for yaourt
