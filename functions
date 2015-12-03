@@ -373,8 +373,9 @@ copy_file(){
 
 sync_data(){
 	if [[ ! -d "$newroot/var/lib/pacman/sync" ]]; then 
+		cp /var/lib/pacman/sync/*.db "$newroot/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.db doesn't exit on host"
 		echo_info " Synchronize database and check needed packages"
-		pacman -r "$newroot" -Syy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"
+		pacman -r "$newroot" -Sy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"
 	else
 		echo_valid " Database already synchronized"
 	fi
