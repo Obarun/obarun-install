@@ -373,12 +373,11 @@ copy_file(){
 
 sync_data(){
 	if [[ ! -d "$newroot/var/lib/pacman/sync" ]]; then 
+		mkdir -p "$newroot/var/lib/pacman/sync/"	
 		cp /var/lib/pacman/sync/*.db "$newroot/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.db doesn't exit on host"
-		echo_info " Synchronize database and check needed packages"
-		pacman -r "$newroot" -Sy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"
-	else
-		echo_valid " Database already synchronized"
 	fi
+	echo_info " Synchronize database and check needed packages"
+	pacman -r "$newroot" -Sy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"	
 }
 
 ##		Install packages if pack = 1
@@ -689,7 +688,7 @@ define_user(){
 	done
 	echo_valid " Create user $newuser"
 	useradd -m -g users -G "audio,floppy,log,network,rfkill,scanner,storage,optical,power,wheel,video" -s /usr/bin/zsh "$newuser"
-	if [[ -e /home/$newuser/.xinitrc ]]; then
+	if [[ -e "/home/$newuser/.xinitrc" ]]; then
 		local locale_xinit
 		locale_xinit=$(grep -v "#" /etc/locale.gen | sed 's/ UTF-8//g' | awk -F "_" '{ print $1 }')
 		sed -i 's/#setxkbmap.*$/setxkbmap\ '$locale_xinit'\ \&/g' /home/$newuser/.xinitrc
