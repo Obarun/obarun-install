@@ -224,7 +224,9 @@ edit_pacman(){
 edit_customize_chroot(){
 	check_editor
 	"$editor" "$gen_dir/$config_dir/customizeChroot"
-	cp -f "$gen_dir/$config_dir/customizeChroot" "$newroot/etc/customizeChroot" || die " File customizeChroot not exist"
+	if [[ -d "$newroot/etc" ]]; then
+		cp -f "$gen_dir/$config_dir/customizeChroot" "$newroot/etc/customizeChroot" || die " File customizeChroot not exist"
+	fi
 }
 
 ## 		Create temporary users for yaourt
@@ -625,6 +627,14 @@ define_locale(){
 	locale_rc=$(grep -v "#" /etc/locale.gen | sed 's/ UTF-8//g' | awk -F "_" '{ print $1 }')
 	sed -i "s,KEYMAP=\".*$,KEYMAP=\"$locale_rc\",g" /etc/rc.conf
 	echo_valid " Locale was created successfully"
+	# define local for root
+	if [[ -e "/root/.xinitrc" ]]; then
+		local locale_xinit
+		locale_xinit=$(grep -v "#" /etc/locale.gen | sed 's/ UTF-8//g' | awk -F "_" '{ print $1 }')
+		echo_info " Define locale in /root/.xinitrc"
+		sed -i 's/#setxkbmap.*$/setxkbmap\ '$locale_xinit'\ \&/g' /root/.xinitrc
+		sed -i 's/setxkbmap.*$/setxkbmap\ '$locale_xinit'\ \&/g' /root/.xinitrc
+	fi
 }
 
 ##		Define localtime
@@ -707,6 +717,7 @@ pass_user(){
 	done
 }
 
+	
 ##		Define a Bootloader
 
 #define_bootloader(){
