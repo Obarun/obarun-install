@@ -379,7 +379,7 @@ sync_data(){
 		cp /var/lib/pacman/sync/*.db "$newroot/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.db doesn't exit on host"
 	fi
 	echo_info " Synchronize database and check needed packages"
-	pacman -r "$newroot" -Sy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"	
+	pacman -r "$newroot" -Syy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"	
 }
 
 ##		Install packages if pack = 1
@@ -718,8 +718,20 @@ pass_user(){
 }
 
 	
-##		Define a Bootloader
+##		Define/configure Bootloader
 
+edit_syslinux(){
+	local reply
+	echo_display " Do you want edit syslinux.cfg [y|n]"
+	read reply
+	while [[ ! "$reply" = @(y|n) ]]; do
+		answer
+		read reply
+	done
+	check_editor
+	"$editor" "/boot/syslinux/syslinux.cfg"
+}
+	
 #define_bootloader(){
 	
 #}
