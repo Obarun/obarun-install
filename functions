@@ -731,17 +731,25 @@ edit_syslinux(){
 	check_editor
 	"$editor" "/boot/syslinux/syslinux.cfg"
 }
+
+##		Reply functions
+## return 0 for yes
+## return 1 for no
+reply_answer(){
+	local reply
+	read reply
+	while [[ ! "$reply" = @(y|n) ]]; do
+		answer
+		read reply
+	done
+	if [ "$reply" == "y" ]; then
+		return 0
+	else
+		return 1
+	fi	
+}
 	
 #define_bootloader(){
 	
 #}
-##		Reply functions
-#reply_answer(){
-#	local reply
-#	echo_display " Would you like define your hostname"
-#	read reply
-#	while [[ ! "$reply" = @(y|n) ]]; do
-#		answer
-#		read reply
-#	done
-#}
+
