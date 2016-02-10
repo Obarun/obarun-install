@@ -94,6 +94,11 @@ clean_install(){
 	if [[  -e "$newroot/etc/customizeChroot" ]]; then
 		rm "$newroot/etc/customizeChroot" || die " File customizeChroot not exist"
 	fi
+	if [[ -d "$newroot/var/cache/pacman/pkg/yaourt" ]]; then
+		echo_info " To avoid problem when cleaning cache directory with pacman,"
+		echo_info " the yaourt cache direcotry is erased"
+		rm -R "$newroot/var/cache/pacman/pkg/yaourt"
+	fi
 	exit
 }
 
@@ -395,8 +400,12 @@ install_pack(){
 ##		Generate fstab
 
 gen_fstab(){
-	echo_info " Generate fstab"
-	genfstab -p "$newroot" >> "$newroot/etc/fstab" || die " Impossible to generate fstab"
+	if [[ ! -s "$newroot/etc/fstab" ]]; then
+		echo_info " Generate fstab"
+		genfstab -p "$newroot" >> "$newroot/etc/fstab" || die " Impossible to generate fstab"
+	else
+		echo_valid " File $newroot/etc/fstab already exist"
+	fi
 }
 
 ##		Copy directory rootfs in $newroot
@@ -428,6 +437,14 @@ enter_chroot(){
 mc_newroot(){
 	mc "$newroot/"
 }
+
+##		Open an interactive shell on newroot
+
+call_shell(){
+	echo_info " Tape exit when you have finished"
+	zsh -c "cd $newroot; exec zsh -i"	
+}
+
 ##		Define root user
 
 define_root(){
@@ -489,6 +506,7 @@ while [[ "$step" !=  10 ]]; do
 	echo_bold ""
 	echo_bold " 11 -  Browse $newroot with Midnight Commander"	
 	echo_bold " 12 -  Edit the script customizeChroot which configure the fresh installation"
+	echo_bold " 13 -  Open an interactive shell at root directory [$newroot]" 	
 	echo_bold ""
 	echo_bold ""
 	echo_info " Enter your choice :";read  step
@@ -508,6 +526,7 @@ while [[ "$step" !=  10 ]]; do
 				exit;;
 			11) mc_newroot;;
 			12)	edit_customize_chroot;;
+			13) call_shell;;
 			*) echo_retry " Invalid number, Please retry: "
 		esac
 		echo_info " Press enter to return to the Main menu"
