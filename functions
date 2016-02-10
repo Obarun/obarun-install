@@ -400,12 +400,8 @@ install_pack(){
 ##		Generate fstab
 
 gen_fstab(){
-	if [[ ! -s "$newroot/etc/fstab" ]]; then
-		echo_info " Generate fstab"
-		genfstab -p "$newroot" >> "$newroot/etc/fstab" || die " Impossible to generate fstab"
-	else
-		echo_valid " File $newroot/etc/fstab already exist"
-	fi
+	echo_info " Generate fstab"
+	genfstab -p "$newroot" > "$newroot/etc/fstab" || die " Impossible to generate fstab"
 }
 
 ##		Copy directory rootfs in $newroot
