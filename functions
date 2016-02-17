@@ -21,7 +21,7 @@ bblue=${bold}$(tput setaf 4)
 ## 		Some variables
 
 editor="mcedit"
-config_dir="obarun"
+config_dir="openbox"
 newroot="/mnt"
 pacmanEdit=""
 cache_dir="/var/cache/pacman/pkg"
@@ -312,7 +312,7 @@ select_list(){
 ## 		Install packages with pacman
 
 pac_install(){
-		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*) --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm || die " Failed to install packages"
+		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*) --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm 2>/dev/null || die " Failed to install packages"
 }
 
 ## 		Install package from aur
