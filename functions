@@ -383,7 +383,7 @@ sync_data(){
 		mkdir -p "$newroot/var/lib/pacman/sync/"	
 		cp /var/lib/pacman/sync/*.db "$newroot/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.db doesn't exit on host"
 	fi
-	echo_info " Synchronize database and check needed packages"
+	echo_info " Synchronize database"
 	pacman -r "$newroot" -Syy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"	
 }
 
@@ -395,6 +395,27 @@ install_pack(){
 		pac_install || die " Impossible to install packages from repository" 
 		aur_install || die " Impossible to install packages from AUR"
 	fi
+}
+
+##		Generate key
+pac_key(){
+	echo_info " Start pacman-key"
+	haveged -w 1024
+	pacman-key --init
+	pacman-key --populate archlinux
+	
+	if ! pacman-key --list-keys 7B45DAC &>/dev/null; then
+		echo_info " Add Eric Vidal gpg signature, please wait"
+		pacman-key -r 7B45DAAC
+		pacman-key --lsign-key 7B45DAAC
+	fi
+	pkill haveged
+	pkill gpg-agent
+	pkill dirmngr
+	
+	echo_info " Change pacman.conf configuration"
+	sed -i "s:SigLevel = Never.*#:SigLevel = Required DatabaseOptional:" /etc/pacman.conf
+	sed -i "s:#SigLevel = PackageRequired:SigLevel = PackageRequired:" /etc/pacman.conf
 }
 
 ##		Generate fstab
