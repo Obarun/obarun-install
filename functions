@@ -593,7 +593,7 @@ while [[ "$step" !=  10 ]]; do
 	echo_bold " 11 -  Launch a shell on ${green}[$newroot]${reset}${bold} directory"
 	echo_bold " 12 -  Browse ${green}[$newroot]${reset}${bold} with Midnight Commander"
 	echo_bold ""
-	echo_bold " 13 -  ${red}Exit installation script"
+	echo_bold " ${red}13 -  Exit installation script"
 	echo_bold ""
 	echo_info " Enter your choice :";read  step
 
@@ -662,7 +662,7 @@ while [[ "$step" !=  8 ]]; do
 	echo_bold ""
 	echo_bold " 7  -  Continue the installation"
 	echo_bold ""
-	echo_bold " 8  -  ${red}Return to the main menu"
+	echo_bold " ${red}8  -  Return to the main menu"
 	echo_bold ""
 	echo_bold ""
 	echo_info " Enter your choice :";read  step
@@ -824,21 +824,6 @@ pass_user(){
 	done
 }
 
-	
-##		Define/configure Bootloader
-
-edit_syslinux(){
-	local reply
-	echo_display " Do you want edit syslinux.cfg [y|n]"
-	read reply
-	while [[ ! "$reply" = @(y|n) ]]; do
-		answer
-		read reply
-	done
-	check_editor
-	"$editor" "/boot/syslinux/syslinux.cfg"
-}
-
 ##		Reply functions
 ## return 0 for yes
 ## return 1 for no
@@ -856,7 +841,79 @@ reply_answer(){
 	fi	
 }
 	
+##		Define/configure Bootloader
+
+# TODO : let the choice at user to choose between bootloader
 #define_bootloader(){
 	
 #}
+
+syslinux_install(){
+	local opts="$1"
+	echo_info " Installing bootloader: syslinux"
+	syslinux-install_update $opts
+	
+	echo_info " Maybe the partition name in the root parameter needs to be replaced."
+	echo_info " Be sure to point the root partition in the line APPEND."
+	syslinux_edit
+	echo_info " Syslinux install terminate"
+}
+
+syslinux_edit(){
+	local reply
+	echo_display " Do you want edit syslinux.cfg [y|n]"
+	read reply
+	while [[ ! "$reply" = @(y|n) ]]; do
+		answer
+		read reply
+	done
+	if [ $reply = y ]; then
+		check_editor
+		"$editor" "/boot/syslinux/syslinux.cfg"
+	fi
+}
+
+syslinux_menu(){
+
+	locale step=100 options=""
+
+	while [[ "$step" != 5 ]]; do
+		clear
+	
+		echo_bold ""
+		echo_bold ""
+		echo_info_menu "**************************************************************"
+		echo_info_menu "              Syslinux configuration menu"
+		echo_info_menu "**************************************************************"
+		echo_bold ""
+		echo_bold " 1 - Install files, set boot flag, install MBR ${green}[-iam]"
+		echo_bold " 2 - Install files, set boot flag ${green}[-ia]"
+		echo_bold " 3 - Install only MBR ${green}[-m]"
+		echo_bold " 4 - Only set boot flag ${green}[-a]"
+		echo_bold ""
+		echo_bold " ${red}5 - Exit"
+		echo_bold ""
+		echo_bold ""
+		echo_info " Enter your choice :";read step
+
+			case "$step" in
+				1)	options="-iam"
+					break;;
+				2) 	options="ia"
+					break;;
+				3) 	options="-m"
+					break;;
+				4) 	options="-a"
+					break;;
+				5) 	echo_info " Exiting"
+					exit;;
+				*) 	echo_retry " Invalid number, please retry:"
+					echo_info " Press enter to return to syslinux configuration menu"
+					read enter;;
+			esac	
+	done
+	
+	syslinux_install "$options"
+}
+
 
