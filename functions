@@ -359,6 +359,7 @@ aur_cache(){
 		fi
 	done
 	
+	# TODO : FAIL try to install a package group instead of package name
 	# install from cache if present else download it
 	if [[ -n "${result[@]}" ]]; then
 		while read -d "," wanted; do
@@ -374,7 +375,6 @@ aur_cache(){
 				else
 					sudo -u usertmp yaourt -r "$newroot" -S"$sync" "$wanted" --noconfirm || die " Failed to install packages" 
 					hit=""
-					
 				fi
 			else
 				sudo -u usertmp yaourt -r "$newroot" -S"$sync" "$wanted" --noconfirm || die " Failed to install packages"
@@ -439,7 +439,7 @@ resume_install(){
 	
 	# TODO : bug -> n°7 need to be launch one time else /var/lib/pacman doesn't exist
 	mapfile -t installed < <(pacman -r "$newroot" -Qsq)
-	mapfile -t notinstalled < <(grep -h -v ^# /home/obarun/Archives/obarun-install/config/openbox/package_list/repo_*)
+	mapfile -t notinstalled < <(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*)
 	echo_info " Ckeck installed packages for pacman"
 	list=" ${installed[@]} "                #include blank    
 		for item in ${notinstalled[@]}; do
