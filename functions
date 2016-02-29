@@ -1,4 +1,4 @@
-#!/usr/bin/sh
+#!/usr/bin/bash
 ## This script is under license BEER-WARE.
 # "THE BEER-WARE LICENSE" (Revision 42):
 # <eric@obarun.org> wrote this file.  As long as you retain this notice you
@@ -34,7 +34,7 @@ hostname=""
 locale="" 
 locale_rc=""
 pack=0
-yaourt_cache="$newroot/var/cache/pacman/pkg/yaourt"
+yaourt_cache="$newroot/var/cache/pacman/pkg/yaourt" ## TODO : need to change the cache location
 tmp_yaourt="$yaourt_cache/tmp/"
 enter_count=0
 
@@ -83,7 +83,7 @@ clean_install(){
 	fi
 	if [[ $(awk -F':' '{ print $1}' /etc/passwd | grep usertmp) >/dev/null ]]; then
 		echo_info " Removing user usertmp"
-		rem_usertmp
+		rem_usertmp &>/dev/null
 	fi
 	if [[ -e /etc/yaourtrc.ori.obarun ]]; then
 		mv /etc/yaourtrc.ori.obarun /etc/yaourtrc
@@ -343,16 +343,46 @@ aur_install(){
 }
 
 aur_cache(){
-	local y_cache
-	ls -1 -p $yaourt_cache/ | grep -v '/$' | grep -v "gz" | sed 's/-[0-9]/ = /g' | awk -F "=" '{ print $1 }' > $yaourt_cache/tmplist
-	y_cache=$(cat $gen_dir/$config_dir/package_list/aur_* | grep -v "#" | sed  '/^ *$/d')
-	for i in $y_cache;do
-		if [[ $(sed -n '1,$p' "$i" 2&>/dev/null | grep "$i" $yaourt_cache/tmplist) != "" ]]; then
-			sudo -u usertmp yaourt -r "$newroot" -U"$sync" "$yaourt_cache"/$i*.xz --noconfirm || die " Failed to install packages"
-		else
-			sudo -u usertmp yaourt -r "$newroot" -S"$sync" "$i" --noconfirm || die " Failed to install packages"
+	local list item hit wanted name
+	local -a installed notinstalled cached result
+	
+	mapfile -t installed < <(pacman -r "$newroot" -Qsq)
+	mapfile -t notinstalled < <(cat $gen_dir/$config_dir/package_list/aur_* | grep -v "#" | sed  '/^ *$/d')
+	mapfile -t cached < <(ls -1 -p $yaourt_cache/ | grep -v '/$' | grep -v "gz" | sed 's/-[0-9]/ = /g' | awk -F "=" '{ print $1 }')
+	
+	echo_info " Ckeck installed packages for yaourt"
+	# diff between wanted and installed	
+	list=" ${installed[@]} "                  
+	for item in "${notinstalled[@]}"; do
+		if ! [[ $list =~ " $item " ]] ; then  
+			result+=($item,)
 		fi
 	done
+	
+	# install from cache if present else download it
+	if [[ -n "${result[@]}" ]]; then
+		while read -d "," wanted; do
+			if [[ -n "${cached[@]}" ]]; then
+				for name in "${cached[@]}"; do
+					if [ $name = $wanted ]; then
+						hit=0
+					fi
+				done
+				if [[ $hit = 0 ]]; then
+					pacman -r "$newroot" -U"$sync" "$yaourt_cache"/$wanted*.xz --noconfirm || die " Failed to install packages" 
+					hit=""
+				else
+					sudo -u usertmp yaourt -r "$newroot" -S"$sync" "$wanted" --noconfirm || die " Failed to install packages" 
+					hit=""
+					
+				fi
+			else
+				sudo -u usertmp yaourt -r "$newroot" -S"$sync" "$wanted" --noconfirm || die " Failed to install packages"
+			fi
+		done <<< ${result[@]}
+	else
+		echo_valid " Nothing to do for yaourt"
+	fi
 }
 
 ##		Copying file needed
@@ -362,7 +392,7 @@ copy_file(){
 	if [[  ! -e "$newroot/etc/resolv.conf" ]]; then 
 		cp /etc/resolv.conf "$newroot/etc/resolv.conf" || die " Impossible to copy the file resolv.conf"
 	else
-		echo_valid " File resolv.cong already exist"
+		echo_valid " File resolv.conf already exist"
 	fi
 	if [[ ! -e "$newroot/etc/functions" ]]; then
 		cp "`pwd`/functions" "$newroot/etc/functions" || die "File functions not exist"
@@ -384,16 +414,46 @@ sync_data(){
 		cp /var/lib/pacman/sync/*.db "$newroot/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.db doesn't exit on host"
 	fi
 	echo_info " Synchronize database"
-	pacman -r "$newroot" -Syy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"	
+	pacman -r "$newroot" -Sy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"	
 }
 
-##		Install packages if pack = 1
+##		Install packages if pack = 0 otherwise call resume_install function
 
 install_pack(){
 	if [[ "$pack" == 0 ]]; then
 		echo_info " Install packages from lists"
 		pac_install || die " Impossible to install packages from repository" 
 		aur_install || die " Impossible to install packages from AUR"
+	else
+		resume_install
+		aur_install
+	fi
+			
+}
+
+##		Only install packages are not present yet
+
+resume_install(){
+	local list item
+	local -a installed notinstalled result
+	
+	# TODO : bug -> n°7 need to be launch one time else /var/lib/pacman doesn't exist
+	mapfile -t installed < <(pacman -r "$newroot" -Qsq)
+	mapfile -t notinstalled < <(grep -h -v ^# /home/obarun/Archives/obarun-install/config/openbox/package_list/repo_*)
+	echo_info " Ckeck installed packages for pacman"
+	list=" ${installed[@]} "                #include blank    
+		for item in ${notinstalled[@]}; do
+			if ! [[ $list =~ " $item " ]] ; then  
+				result+=($item)
+			fi
+		done
+	
+	#install package
+	if [[ -n "${result[@]}" ]]; then
+		echo_info " Install missing packages"
+		pacman -r "$newroot" -S "${result[@]}" --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm 2>/dev/null || die " Failed to install packages"
+	else
+		echo_valid " Nothing to do for pacman"
 	fi
 }
 
@@ -459,7 +519,11 @@ mc_newroot(){
 
 call_shell(){
 	echo_info " Tape exit when you have finished"
-	zsh -c "cd $newroot; exec zsh -i"	
+	if [[ -e "$newroot/usr/bin/zsh" ]]; then
+		SHELL=/bin/sh chroot "$newroot" /usr/bin/zsh 
+	else
+		SHELL=/bin/sh chroot "$newroot"
+	fi
 }
 
 ##		Define root user
