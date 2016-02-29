@@ -512,7 +512,7 @@ enter_chroot(){
 ##		Enter in $newroot with mc
 
 mc_newroot(){
-	mc "$newroot/"
+	SHELL=/bin/sh chroot "$newroot" /usr/bin/mc
 }
 
 ##		Open an interactive shell on newroot
@@ -653,7 +653,7 @@ while [[ "$step" !=  8 ]]; do
 	echo_bold " 3  -  Define localtime [$zone/$subzone]"
 	echo_bold " 4  -  Create a new user [$newuser]"
 	echo_bold " 5  -  Edit rc.conf file"
-	echo_bold " 6  -  Edit the fresh installation with Midnight Commander"
+	echo_bold " 6  -  Launch Midnight Commander to edit installation"
 	echo_bold " 7  -  Exit customization menu and continue the installation"
 	echo_bold " 8  -  Return to the main menu"
 	echo_bold ""
