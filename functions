@@ -46,6 +46,9 @@ echo_bold(){
 echo_info(){
 	echo "${byellow}==>>${1}${reset}"
 }
+echo_info_menu(){
+	echo "${byellow}${1}${reset}"
+}
 echo_retry(){
 	echo "${bblue}==>>${1}${reset}"
 }
@@ -560,35 +563,37 @@ while [[ "$step" !=  10 ]]; do
 	clear
 	echo_bold ""
 	echo_bold ""
-	echo_bold "***************************************************************************************"
-	echo_bold "                            Main menu"
-	echo_bold "***************************************************************************************"
+	echo_info_menu "***************************************************************************************"
+	echo_info_menu "                            Main menu"
+	echo_info_menu "***************************************************************************************"
 	echo_bold " Assumptions :"
-	echo_bold "		- User has partitioned, formatted, and mounted partitions on a directory"
-	echo_bold "		- Network is functional"
-	echo_bold "		- A valid mirror appears in /etc/pacman.d/mirrorlist"
-	echo_bold "		- Defaults for the options are specified in brackets"
+	echo_bold "	- User has partitioned, formatted, and mounted partitions on a directory"
+	echo_bold "	- Network is functional"
+	echo_bold "	- A valid mirror appears in /etc/pacman.d/mirrorlist"
+	echo_bold "	- Defaults for the options are specified in brackets"
+	echo_info_menu "***************************************************************************************"
+	echo_info_menu "                            Configuration"
+	echo_info_menu "***************************************************************************************"
+	echo_bold " 1  -  Select Editor ${green}[$editor]"
+	echo_bold " 2  -  Choose your Desktop environment ${green}[$config_dir]"
+	echo_bold " 3  -  Edit pacman.conf file used by the script"
+	echo_bold " 4  -  Define cache directory for pacman ${green}[$cache_dir]"
+	echo_bold " 5  -  Edit the list of packages that will be installed (AUR including)"
+	echo_bold " 6  -  Enter root directory for installation ${green}[$newroot]"
+	echo_info_menu "***************************************************************************************"
+	echo_info_menu "                            Installation"
+	echo_info_menu "***************************************************************************************"
+	echo_bold " 7  -  Install the base system"
+	echo_bold " 8  -  Launch the script customizeChroot"
+	echo_bold " 9  -  Resume an aborted installation"	 	
+	echo_info_menu "***************************************************************************************"
+	echo_info_menu "                            Edition"
+	echo_info_menu "***************************************************************************************"
+	echo_bold " 10 -  Edit the script customizeChroot"
+	echo_bold " 11 -  Launch a shell on ${green}[$newroot]${reset}${bold} directory"
+	echo_bold " 12 -  Browse ${green}[$newroot]${reset}${bold} with Midnight Commander"
 	echo_bold ""
-	echo_bold ""
-	echo_bold " 1  -  Select Editor [$editor]"
-	echo_bold " 2  -  Choose the directory contening configuration files [$config_dir]"
-	echo_bold " 3  -  Edit the pacman.conf used by the script"
-	echo_bold " 4  -  Define your own cache directory for pacman [$cache_dir]"
-	echo_bold " 5  -  Edit the packages lists (AUR including) from repo defined in pacman.conf"
-	echo_bold " 6  -  Enter your root directory of the installation [$newroot]"
-	echo_bold " 7  -  Install the new system"
-	echo_bold " 8  -  Resume an aborted install (packages are already installed at $newroot)"
-	echo_bold " 9  -  Enter in chroot of ${newroot} and launch the script customizeChroot"
-	echo_bold " 10 -  Exit installation script"
-	echo_bold ""
-	echo_bold "***************************************************************************************"
-	echo_bold "                            Options"
-	echo_bold "***************************************************************************************"
-	echo_bold ""
-	echo_bold " 11 -  Browse $newroot with Midnight Commander"	
-	echo_bold " 12 -  Edit the script customizeChroot which configure the fresh installation"
-	echo_bold " 13 -  Open an interactive shell at root directory [$newroot]" 	
-	echo_bold ""
+	echo_bold " 13 -  ${red}Exit installation script"
 	echo_bold ""
 	echo_info " Enter your choice :";read  step
 
@@ -600,14 +605,14 @@ while [[ "$step" !=  10 ]]; do
 			5)	select_list;;
 			6)	rootdir;; # Never comment this options
 			7)	install_system;;
-			8)	pack=1
+			8)	enter_chroot;;
+			9)	pack=1
 				install_system;;
-			9)	enter_chroot;;
-			10)	echo_info " Exiting"
+			10)	edit_customize_chroot;;
+			11) call_shell;;
+			12)	mc_newroot;;
+			13) echo_info " Exiting"
 				exit;;
-			11) mc_newroot;;
-			12)	edit_customize_chroot;;
-			13) call_shell;;
 			*) echo_retry " Invalid number, Please retry: "
 		esac
 		echo_info " Press enter to return to the Main menu"
@@ -644,18 +649,20 @@ while [[ "$step" !=  8 ]]; do
 	clear
 	echo_bold ""
 	echo_bold ""
-	echo_bold "**************************************************************"
-	echo_bold "              CustomizeChroot menu"
-	echo_bold "**************************************************************"
+	echo_info_menu "**************************************************************"
+	echo_info_menu "              CustomizeChroot menu"
+	echo_info_menu "**************************************************************"
 	echo_bold ""
-	echo_bold " 1  -  Define hostname [$hostname]"
-	echo_bold " 2  -  Define locale [$locale]"
-	echo_bold " 3  -  Define localtime [$zone/$subzone]"
-	echo_bold " 4  -  Create a new user [$newuser]"
+	echo_bold " 1  -  Define hostname ${green}[$hostname]"
+	echo_bold " 2  -  Define locale ${green}[$locale]"
+	echo_bold " 3  -  Define localtime ${green}[$zone/$subzone]"
+	echo_bold " 4  -  Create a new user ${green}[$newuser]"
 	echo_bold " 5  -  Edit rc.conf file"
-	echo_bold " 6  -  Launch Midnight Commander to edit installation"
-	echo_bold " 7  -  Exit customization menu and continue the installation"
-	echo_bold " 8  -  Return to the main menu"
+	echo_bold " 6  -  Browse with Midnight Commander"
+	echo_bold ""
+	echo_bold " 7  -  Continue the installation"
+	echo_bold ""
+	echo_bold " 8  -  ${red}Return to the main menu"
 	echo_bold ""
 	echo_bold ""
 	echo_info " Enter your choice :";read  step
