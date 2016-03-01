@@ -34,8 +34,8 @@ hostname=""
 locale="" 
 locale_rc=""
 pack=0
-yaourt_cache="$newroot/var/cache/pacman/pkg/yaourt" ## TODO : need to change the cache location
-tmp_yaourt="$yaourt_cache/tmp/"
+yaourt_cache="$newroot/var/cache/pacman/pkg" 
+tmp_yaourt="$newroot/tmp/"
 enter_count=0
 
 ## 		Information display by the script 
@@ -82,7 +82,7 @@ clean_install(){
 	check_mounted
 	if [[ "$file_mounted" != "" ]]; then
 		echo_info " Umount filesystem in $newroot"
-		umount -R /mnt/{proc,sys,dev,tmp,run}
+		umount -R $newroot/{proc,sys,dev,tmp,run}
 	fi
 	if [[ $(awk -F':' '{ print $1}' /etc/passwd | grep usertmp) >/dev/null ]]; then
 		echo_info " Removing user usertmp"
@@ -97,11 +97,7 @@ clean_install(){
 	if [[  -e "$newroot/etc/customizeChroot" ]]; then
 		rm "$newroot/etc/customizeChroot" || die " File customizeChroot not exist"
 	fi
-	if [[ -d "$newroot/var/cache/pacman/pkg/yaourt" ]]; then
-		echo_info " To avoid problem when cleaning cache directory with pacman,"
-		echo_info " the yaourt cache direcotry is erased"
-		rm -R "$newroot/var/cache/pacman/pkg/yaourt"
-	fi
+	chmod -R 0755 $newroot/$cache_dir
 	exit
 }
 
@@ -193,9 +189,7 @@ choose_dir(){
 	echo_display " Select the directory you want to use :"
 	select dir in $dir_list; do
 		if check_elements "$dir" $dir_list; then
-			config_dir="$dir"
-			sed -i "s,EXPORTDIR=\".*$,EXPORTDIR=\"$yaourt_cache\/\",g" $gen_dir/$config_dir/yaourtrc
-			sed -i "s,TMPDIR=\".*$,TMPDIR=\"$yaourt_cache\/tmp\/\",g" $gen_dir/$config_dir/yaourtrc 	 
+			config_dir="$dir"	 
 		break
 		else 
 			echo_retry " Invalid number, retry :"
@@ -326,21 +320,14 @@ aur_install(){
 	else
 		sync=""
 	fi
-	if [[ ! -d "$yaourt_cache" ]]; then
-		mkdir -p -m777  "$yaourt_cache"
-		mkdir -p -m777 "$tmp_yaourt"
-	fi
+		
 	if [[ ! -e /etc/yaourtrc.ori.obarun ]]; then
 		if [[ -e /etc/yaourtrc ]]; then
-			mv /etc/yaourtrc /etc/yaourtrc.ori.obarun
+			cp /etc/yaourtrc /etc/yaourtrc.ori.obarun
 		fi
-		cp "$gen_dir/$config_dir/yaourtrc" /etc/yaourtrc || die " yaourtrc file not exist"
-		sed -i "s,#TMPDIR=\".*$,TMPDIR=\"$tmp_yaourt\",g" /etc/yaourtrc
-		sed -i "s,#EXPORTDIR=\".*$,EXPORTDIR=\"$yaourt_cache\",g" /etc/yaourtrc
-		sed -i "s,#EXPORT=.*$,EXPORT=1,g" /etc/yaourtrc
-		sed -i "s,TMPDIR=\".*$,TMPDIR=\"$tmp_yaourt\",g" /etc/yaourtrc
-		sed -i "s,EXPORTDIR=\".*$,EXPORTDIR=\"$yaourt_cache\",g" /etc/yaourtrc
-		sed -i "s,EXPORT=.*$,EXPORT=1,g" /etc/yaourtrc
+		sed -i "s:#TMPDIR=.*$:TMPDIR=$tmp_yaourt:" /etc/yaourtrc
+		sed -i "s:#EXPORT=.*$:EXPORT=1:" /etc/yaourtrc
+		sed -i "s:#EXPORTDIR=.*$:EXPORTDIR=$yaourt_cache:" /etc/yaourtrc
 	fi	
 	aur_cache
 }
@@ -423,6 +410,7 @@ sync_data(){
 ##		Install packages if pack = 0 otherwise call resume_install function
 
 install_pack(){
+	chmod -R 0777 $newroot/$cache_dir ## this turn around is little ugly but necessary to allow written by user "usertmp"
 	if [[ "$pack" == 0 ]]; then
 		echo_info " Install packages from lists"
 		pac_install || die " Impossible to install packages from repository" 
@@ -498,6 +486,15 @@ copy_rootfs(){
 ##		Customize newroot
 
 enter_chroot(){
+	echo_info " Check for needed stuff"
+	check_mountpoint
+	create_dir
+	mount_dir
+	user_tmp
+	copy_file
+	sync_data
+	copy_rootfs
+	define_root
 	echo_info " Enter in chroot of ${newroot}"	
 	if [[ ! -e "$newroot/etc/functions" ]]; then
 		cp "`pwd`/functions" "$newroot/etc/functions" || die "File functions not exist"
@@ -736,7 +733,7 @@ define_locale(){
 	echo_valid " Locale was created successfully"
 	# define local for root
 	if [[ -e "/root/.xinitrc" ]]; then
-		local locale_xinit
+		locale_xinit=""
 		locale_xinit=$(grep -v "#" /etc/locale.gen | sed 's/ UTF-8//g' | awk -F "_" '{ print $1 }')
 		echo_info " Define locale in /root/.xinitrc"
 		sed -i 's/#setxkbmap.*$/setxkbmap\ '$locale_xinit'\ \&/g' /root/.xinitrc
@@ -806,7 +803,7 @@ define_user(){
 	echo_valid " Create user $newuser"
 	useradd -m -g users -G "audio,floppy,log,network,rfkill,scanner,storage,optical,power,wheel,video" -s /usr/bin/zsh "$newuser"
 	if [[ -e "/home/$newuser/.xinitrc" ]]; then
-		local locale_xinit
+		locale_xinit=""
 		locale_xinit=$(grep -v "#" /etc/locale.gen | sed 's/ UTF-8//g' | awk -F "_" '{ print $1 }')
 		sed -i 's/#setxkbmap.*$/setxkbmap\ '$locale_xinit'\ \&/g' /home/$newuser/.xinitrc
 		sed -i 's/setxkbmap.*$/setxkbmap\ '$locale_xinit'\ \&/g' /home/$newuser/.xinitrc
