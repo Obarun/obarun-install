@@ -403,10 +403,9 @@ sync_data(){
 	echo_info " Synchronize database"
 	pacman -Sy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"
 	
-	if ! [ -s "$newroot/var/lib/pacman/sync/core.db" ]; then
-		echo_info " Copying database on $newroot/var/lib/pacman/sync/"	
-		cp /var/lib/pacman/sync/*.db "$newroot/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.db doesn't exit on host"
-	fi	
+	echo_info " Copying database on $newroot/var/lib/pacman/sync/"
+	mkdir -p -m0755 "$newroot/var/lib/pacman/sync/"	
+	cp /var/lib/pacman/sync/*.db "$newroot/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.db doesn't exit on host"
 }
 
 ##		Install packages if pack = 0 otherwise call resume_install function
@@ -464,7 +463,7 @@ pac_key(){
 	pacman-key --init $gpg_opts
 	pacman-key --populate archlinux $gpg_opts
 	
-	if ! pacman-key --list-keys 7B45DAC $gpg_opts &>/dev/null; then
+	if ! pacman-key --list-keys 7B45DAAC $gpg_opts &>/dev/null; then
 		echo_info " Add Eric Vidal gpg signature, please wait"
 		pacman-key -r 7B45DAAC $gpg_opts
 		pacman-key --lsign-key 7B45DAAC $gpg_opts
