@@ -26,6 +26,7 @@ newroot="/mnt"
 pacmanEdit=""
 cache_dir="/var/cache/pacman/pkg"
 gen_dir=`pwd`/config
+gpg_dir="/opt/obarun-install/gnupg"
 file_mounted=""
 newuser=""
 zone=""
@@ -309,7 +310,7 @@ select_list(){
 ## 		Install packages with pacman
 
 pac_install(){
-		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*) --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm 2>/dev/null || die " Failed to install packages"
+		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*) --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm #2>/dev/null || die " Failed to install packages"
 }
 
 ## 		Install package from aur
@@ -399,12 +400,13 @@ copy_file(){
 ##		Sync database
 
 sync_data(){
-	if [[ ! -d "$newroot/var/lib/pacman/sync" ]]; then 
-		mkdir -p "$newroot/var/lib/pacman/sync/"	
-		cp /var/lib/pacman/sync/*.db "$newroot/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.db doesn't exit on host"
-	fi
 	echo_info " Synchronize database"
-	pacman -r "$newroot" -Sy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"	
+	pacman -Sy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"
+	
+	if ! [ -s "$newroot/var/lib/pacman/sync/core.db" ]; then
+		echo_info " Copying database on $newroot/var/lib/pacman/sync/"	
+		cp /var/lib/pacman/sync/*.db "$newroot/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.db doesn't exit on host"
+	fi	
 }
 
 ##		Install packages if pack = 0 otherwise call resume_install function
@@ -412,6 +414,9 @@ sync_data(){
 install_pack(){
 	chmod -R 0777 $newroot/$cache_dir ## this turn around is little ugly but necessary to allow written by user "usertmp"
 	if [[ "$pack" == 0 ]]; then
+		echo_info " Refresh gpg signature before install on /opt/obarun-install/gnupg"
+		pac_key "$gpg_dir"
+		
 		echo_info " Install packages from lists"
 		pac_install || die " Impossible to install packages from repository" 
 		aur_install || die " Impossible to install packages from AUR"
@@ -450,23 +455,29 @@ resume_install(){
 
 ##		Generate key
 pac_key(){
+	
+	if ! [ -z "$1" ]; then
+		gpg_opts="--gpgdir $1"
+	fi
 	echo_info " Start pacman-key"
 	haveged -w 1024
-	pacman-key --init
-	pacman-key --populate archlinux
+	pacman-key --init $gpg_opts
+	pacman-key --populate archlinux $gpg_opts
 	
-	if ! pacman-key --list-keys 7B45DAC &>/dev/null; then
+	if ! pacman-key --list-keys 7B45DAC $gpg_opts &>/dev/null; then
 		echo_info " Add Eric Vidal gpg signature, please wait"
-		pacman-key -r 7B45DAAC
-		pacman-key --lsign-key 7B45DAAC
+		pacman-key -r 7B45DAAC $gpg_opts
+		pacman-key --lsign-key 7B45DAAC $gpg_opts
 	fi
 	pkill haveged
 	pkill gpg-agent
 	pkill dirmngr
 	
-	echo_info " Change pacman.conf configuration"
-	sed -i "s:SigLevel = Never.*#:SigLevel = Required DatabaseOptional:" /etc/pacman.conf
-	sed -i "s:#SigLevel = PackageRequired:SigLevel = PackageRequired:" /etc/pacman.conf
+	if [ -z "$1" ]; then
+		echo_info " Change pacman.conf configuration"
+		sed -i "s:SigLevel = Never.*#:SigLevel = Required DatabaseOptional:" /etc/pacman.conf
+		sed -i "s:#SigLevel = PackageRequired:SigLevel = PackageRequired:" /etc/pacman.conf
+	fi
 }
 
 ##		Generate fstab
@@ -563,29 +574,37 @@ while [[ "$step" !=  10 ]]; do
 	echo_info_menu "***************************************************************************************"
 	echo_info_menu "                            Main menu"
 	echo_info_menu "***************************************************************************************"
+	echo_bold ""
 	echo_bold " Assumptions :"
 	echo_bold "	- User has partitioned, formatted, and mounted partitions on a directory"
 	echo_bold "	- Network is functional"
 	echo_bold "	- A valid mirror appears in /etc/pacman.d/mirrorlist"
 	echo_bold "	- Defaults for the options are specified in brackets"
+	echo_bold ""
 	echo_info_menu "***************************************************************************************"
 	echo_info_menu "                            Configuration"
 	echo_info_menu "***************************************************************************************"
+	echo_bold ""
 	echo_bold " 1  -  Select Editor ${green}[$editor]"
 	echo_bold " 2  -  Choose your Desktop environment ${green}[$config_dir]"
 	echo_bold " 3  -  Edit pacman.conf file used by the script"
 	echo_bold " 4  -  Define cache directory for pacman ${green}[$cache_dir]"
 	echo_bold " 5  -  Edit the list of packages that will be installed (AUR including)"
 	echo_bold " 6  -  Enter root directory for installation ${green}[$newroot]"
+	echo_bold ""
 	echo_info_menu "***************************************************************************************"
 	echo_info_menu "                            Installation"
 	echo_info_menu "***************************************************************************************"
+	echo_bold ""
 	echo_bold " 7  -  Install the base system"
 	echo_bold " 8  -  Launch the script customizeChroot"
+	echo_bold ""
 	echo_bold " 9  -  Resume an aborted installation"	 	
+	echo_bold ""
 	echo_info_menu "***************************************************************************************"
 	echo_info_menu "                            Edition"
 	echo_info_menu "***************************************************************************************"
+	echo_bold ""
 	echo_bold " 10 -  Edit the script customizeChroot"
 	echo_bold " 11 -  Launch a shell on ${green}[$newroot]${reset}${bold} directory"
 	echo_bold " 12 -  Browse ${green}[$newroot]${reset}${bold} with Midnight Commander"
@@ -912,5 +931,3 @@ syslinux_menu(){
 	
 	syslinux_install "$options"
 }
-
-
