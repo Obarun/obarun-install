@@ -5,6 +5,9 @@
 # can do whatever you want with this stuff. If we meet some day, and you think
 # this stuff is worth it, you can buy me a beer in return.   Eric Vidal
 shopt -s extglob
+
+export TMPDIR=
+
 ##		Shell color 
 
 bold=$(tput bold)
@@ -20,12 +23,13 @@ bblue=${bold}$(tput setaf 4)
 
 ## 		Some variables
 
+newroot="/mnt"
 editor="mcedit"
 config_dir="openbox"
-newroot="/mnt"
-pacmanEdit=""
-cache_dir="/var/cache/pacman/pkg"
 gen_dir=`pwd`/config
+cache_dir="/var/cache/pacman/pkg"
+yaourt_cache="$newroot/var/cache/pacman/pkg" 
+tmp_yaourt="$newroot/tmp/"
 gpg_dir="/opt/obarun-install/gnupg"
 file_mounted=""
 newuser=""
@@ -35,9 +39,6 @@ hostname=""
 locale="" 
 locale_rc=""
 pack=0
-yaourt_cache="$newroot/var/cache/pacman/pkg" 
-tmp_yaourt="$newroot/tmp/"
-enter_count=0
 
 ## 		Information display by the script 
 
@@ -62,6 +63,8 @@ echo_display(){
 answer(){
 	echo_retry " Please answer y or n :"
 }
+
+
 
 ## 		Exit
 
@@ -98,7 +101,8 @@ clean_install(){
 	if [[  -e "$newroot/etc/customizeChroot" ]]; then
 		rm "$newroot/etc/customizeChroot" || die " File customizeChroot not exist"
 	fi
-	chmod -R 0755 $newroot/$cache_dir
+	chmod -R 0755 "$yaourt_cache"
+	
 	exit
 }
 
@@ -111,7 +115,7 @@ rem_usertmp(){
 ## 		Create needed directory
 
 create_dir(){
-	if [[ $(ls $newroot | grep proc) = "" ]]; then 
+	if ! [ -d "$newroot/proc" ]; then 
 		echo_info " Create needed directory in ${newroot}"
 		mkdir -m 0755 -p "$newroot"/var/{cache/pacman/pkg,lib/pacman,log} "$newroot"/{dev,run,etc}
 		mkdir -m 0755 -p "$newroot"/dev/{pts,shm}
@@ -208,6 +212,7 @@ choose_cache(){
 		echo_retry " $cache_dir is not a directory, please retry:"
 		read cache_dir
 	done
+	# the directory must be not empty, may be bug here
 	while [[ $(ls $cache_dir | grep "pkg.tar.xz") = "" ]]; do
 		echo_retry " Is not a valid directory for pacman, please retry:"
 		read cache_dir
@@ -238,6 +243,7 @@ user_tmp(){
 	if [[ $(awk -F':' '{ print $1}' /etc/passwd | grep usertmp) </dev/null ]]; then
 		echo_info " Create a temporary user needed to install AUR packages"
 			if [[ -e /etc/sudoers ]]; then
+				# declaring usetmp on adm group is certainly a bad idea
 				useradd -m -g users -G "wheel,disk,storage,optical,floppy,adm,network" -s /bin/bash usertmp || die " Impossible to create user : usertmp"
 				echo "%usertmp ALL=(ALL) NOPASSWD: ALL" >> /etc/sudoers
 			else
@@ -290,7 +296,7 @@ check_pac_needed(){
 
 select_list(){
 	check_editor
-	pac_list=$(ls "$gen_dir"/"$config_dir"/package_list/ | grep -v "yaourt_cache")
+	pac_list=$(ls "$gen_dir"/"$config_dir"/package_list/)
 	pac_list+=" Exit"
 	echo_info " File named repo_* concerns the packages provides by repositories defined in pacman.conf"
 	echo_info " File named aur_* concerns the packages from AUR"
@@ -379,7 +385,7 @@ aur_cache(){
 ##		Copying file needed
 
 copy_file(){
-	echo_info " Copy needed file in ${newroot}"
+	echo_info " Check needed files in ${newroot}"
 	if [[  ! -e "$newroot/etc/resolv.conf" ]]; then 
 		cp /etc/resolv.conf "$newroot/etc/resolv.conf" || die " Impossible to copy the file resolv.conf"
 	else
@@ -403,15 +409,16 @@ sync_data(){
 	echo_info " Synchronize database"
 	pacman -Sy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"
 	
-	echo_info " Copying database on $newroot/var/lib/pacman/sync/"
-	mkdir -p -m0755 "$newroot/var/lib/pacman/sync/"	
+	echo_info " Copying database on $newroot/var/lib/pacman/sync/"	
+	mkdir -p -m0755 "$newroot/var/lib/pacman/sync/"
 	cp /var/lib/pacman/sync/*.db "$newroot/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.db doesn't exit on host"
+		
 }
 
 ##		Install packages if pack = 0 otherwise call resume_install function
 
 install_pack(){
-	chmod -R 0777 $newroot/$cache_dir ## this turn around is little ugly but necessary to allow written by user "usertmp"
+	chmod -R 0777 "$yaourt_cache" ## this turn around is little ugly but necessary to allow written by user "usertmp"
 	if [[ "$pack" == 0 ]]; then
 		echo_info " Refresh gpg signature before install on /opt/obarun-install/gnupg"
 		pac_key "$gpg_dir"
@@ -453,13 +460,24 @@ resume_install(){
 }
 
 ##		Generate key
+
 pac_key(){
+	local gpg_opts
 	
 	if ! [ -z "$1" ]; then
 		gpg_opts="--gpgdir $1"
 	fi
+	
 	echo_info " Start pacman-key"
 	haveged -w 1024
+	
+	# pacman-key -r failed without /root/.gnupg
+	# create it by dirmngr
+	# TODO: find a turn around
+	if ! [ -d /root/.gnupg/ ]; then
+		dirmngr &>/dev/null & pkill dirmngr
+	fi
+	
 	pacman-key --init $gpg_opts
 	pacman-key --populate archlinux $gpg_opts
 	
@@ -470,13 +488,14 @@ pac_key(){
 	fi
 	pkill haveged
 	pkill gpg-agent
-	pkill dirmngr
 	
 	if [ -z "$1" ]; then
 		echo_info " Change pacman.conf configuration"
 		sed -i "s:SigLevel = Never.*#:SigLevel = Required DatabaseOptional:" /etc/pacman.conf
 		sed -i "s:#SigLevel = PackageRequired:SigLevel = PackageRequired:" /etc/pacman.conf
 	fi
+	# unset gpg_opts
+	gpg_opts=
 }
 
 ##		Generate fstab
@@ -496,7 +515,7 @@ copy_rootfs(){
 ##		Customize newroot
 
 enter_chroot(){
-	echo_info " Check for needed stuff"
+	echo_info " Check for needed"
 	check_mountpoint
 	create_dir
 	mount_dir
@@ -540,7 +559,7 @@ call_shell(){
 
 define_root(){
 	if [[ ! $(cat $newroot/etc/shadow | grep "root::") == "" ]]; then
-		echo_info " Modify root user"
+		echo_info " Create root user on $newroot"
 		usermod -R "$newroot" -s /usr/bin/zsh root
 		cp -aT "$newroot/etc/skel/" "$newroot/root/"
 		echo_info " You need to define root password"
@@ -564,7 +583,7 @@ pass_root(){
 
 main_menu(){
 
-locale step=100
+local step=100
 
 while [[ "$step" !=  10 ]]; do
 	clear
