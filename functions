@@ -316,6 +316,8 @@ select_list(){
 ## 		Install packages with pacman
 
 pac_install(){
+		echo_info " Install base first"
+		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/base) --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm #2>/dev/null || die " Failed to install packages"
 		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*) --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm #2>/dev/null || die " Failed to install packages"
 }
 
@@ -435,9 +437,15 @@ sync_data(){
 
 install_pack(){
 	if [[ "$pack" == 0 ]]; then
-		echo_info " Refresh gpg signature before install on /opt/obarun-install/gnupg"
-		pac_key "$gpg_dir"
-		
+		echo_info " Check if gpg signature exist on [$gpg_dir]"
+		if ! pacman-key -u --gpgdir "$gpg_dir" &>/dev/null; then
+			echo_info " Gpg doesn't exist on [$gpg_dir], create it..."
+			pac_key "$gpg_dir"
+		else
+			echo_info " Refresh gpg before install on [$gpg_dir]"
+			pacman-key -u --gpgdir "$gpg_dir"
+		fi
+				
 		echo_info " Install packages from lists"
 		pac_install || die " Impossible to install packages from repository" 
 		aur_install || die " Impossible to install packages from AUR"
@@ -447,6 +455,7 @@ install_pack(){
 	fi
 			
 }
+
 
 ##		Only install packages are not present yet
 
@@ -503,6 +512,7 @@ pac_key(){
 	fi
 	pkill haveged
 	pkill gpg-agent
+	pkill dirmngr
 	
 	if [ -z "$1" ]; then
 		echo_info " Change pacman.conf configuration"
@@ -574,9 +584,12 @@ call_shell(){
 
 define_root(){
 	if [[ ! $(cat $newroot/etc/shadow | grep "root::") == "" ]]; then
-		echo_info " Create root user on $newroot"
+		echo_info " Change shell for root user on $newroot"
 		usermod -R "$newroot" -s /usr/bin/zsh root
-		cp -aT "$newroot/etc/skel/" "$newroot/root/"
+		
+		echo_info " Copy skeleton to $newroot/root/"
+		cp -rT "$newroot/etc/skel/" "$newroot/root/"
+		
 		echo_info " You need to define root password"
 		pass_root
 		echo_valid " root user was modified successfully"
@@ -594,6 +607,25 @@ pass_root(){
 		passwd -R "$newroot" root
 	done
 }
+
+
+##		Start the installation
+
+install_system(){
+	check_mountpoint
+	create_dir
+	mount_dir
+	user_tmp
+	copy_file
+	sync_data
+	check_pac_needed
+	install_pack
+	gen_fstab
+	copy_rootfs
+	define_root
+	pack=0
+}
+
 ## 		Main menu
 
 main_menu(){
@@ -667,23 +699,6 @@ while [[ "$step" !=  10 ]]; do
 		echo_info " Press enter to return to the Main menu"
 		read enter 
 done
-}
-
-##		Start the installation
-
-install_system(){
-	check_mountpoint
-	create_dir
-	mount_dir
-	user_tmp
-	copy_file
-	sync_data
-	check_pac_needed
-	install_pack
-	gen_fstab
-	copy_rootfs
-	define_root
-	pack=0
 }
 
 #####################################		Functions for customizeChroot script
