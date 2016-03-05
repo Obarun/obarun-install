@@ -415,6 +415,12 @@ sync_data(){
 	else
 		echo_valid " Gpg key exist, Refresh it..."
 		pacman-key -u --gpgdir "$gpg_dir"
+		# paranoia here : make sure Eric Vidal key exist
+		if ! pacman-key --list-keys 7B45DAAC --gpgdir "$gpg_dir" &>/dev/null; then
+			echo_info " Add Eric Vidal gpg signature, please wait"
+			pacman-key -r 7B45DAAC $gpg_opts
+			pacman-key --lsign-key 7B45DAAC $gpg_opts
+		fi 
 	fi
 	echo_info " Synchronize database"
 	pacman -Sy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"
