@@ -406,6 +406,14 @@ copy_file(){
 ##		Sync database
 
 sync_data(){
+	echo_info " Check if gpg key exist on [$gpg_dir]"
+	if ! pacman-key -u --gpgdir "$gpg_dir" &>/dev/null; then
+		echo_info " Gpg doesn't exist on [$gpg_dir], create it..."
+		pac_key "$gpg_dir"
+	else
+		echo_valid " Gpg key exist, Refresh it..."
+		pacman-key -u --gpgdir "$gpg_dir"
+	fi
 	echo_info " Synchronize database"
 	pacman -Sy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"
 	
