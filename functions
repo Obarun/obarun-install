@@ -344,12 +344,13 @@ aur_install(){
 }
 
 aur_cache(){
-	local list item hit wanted name
-	local -a installed notinstalled cached result
+	local list item hit wanted name p_hit passed
+	local -a installed notinstalled y_cached p_cached result
 	
 	mapfile -t installed < <(pacman -r "$newroot" -Qsq)
 	mapfile -t notinstalled < <(cat $gen_dir/$config_dir/package_list/aur_* | grep -v "#" | sed  '/^ *$/d')
-	mapfile -t cached < <(ls -1 -p $yaourt_cache/ | grep -v '/$' | grep -v "gz" | sed 's/-[0-9]/ = /g' | awk -F "=" '{ print $1 }')
+	mapfile -t y_cached < <(ls -1 -p $yaourt_cache/ | grep -v '/$' | grep -v "gz" | sed 's/-[0-9].*$//g')
+	mapfile -t p_cached < <(ls $cache_dir | sed 's/-[0-9].*$//g' | uniq)
 	
 	echo_info " Ckeck installed packages for yaourt"
 	# diff between wanted and installed	
@@ -364,18 +365,35 @@ aur_cache(){
 	# install from cache if present else download it
 	if [[ -n "${result[@]}" ]]; then
 		while read -d "," wanted; do
-			if [[ -n "${cached[@]}" ]]; then
-				for name in "${cached[@]}"; do
+			if [[ -n "${y_cached[@]}" ]]; then
+				for name in "${y_cached[@]}"; do
 					if [ $name = $wanted ]; then
 						hit=0
 					fi
 				done
+				for name in "${p_cached[@]}";do
+					if [ $name = $wanted ]; then
+						p_hit=0
+					fi
+				done
+				if [[ $p_hit = 0 ]]; then
+						# check for last version
+						# TODO : can cause problem if the cache directory is out of date, need to be improved
+						pack=$(ls -1t $cache_dir | grep $wanted | head -1) 
+						pacman -r "$newroot" -U"$sync" "$cache_dir"/$pack --noconfirm || die " Failed to install packages" 
+						p_hit=""
+						hit=""
+						passed=0
+				fi
 				if [[ $hit = 0 ]]; then
 					pacman -r "$newroot" -U"$sync" "$yaourt_cache"/$wanted*.xz --noconfirm || die " Failed to install packages" 
 					hit=""
 				else
-					sudo -u usertmp yaourt -r "$newroot" -S"$sync" "$wanted" --noconfirm || die " Failed to install packages" 
-					hit=""
+					if [[ $passed != 0 ]]; then
+						sudo -u usertmp yaourt -r "$newroot" -S"$sync" "$wanted" --noconfirm || die " Failed to install packages" 
+						hit=""
+						passed=""
+					fi
 				fi
 			else
 				sudo -u usertmp yaourt -r "$newroot" -S"$sync" "$wanted" --noconfirm || die " Failed to install packages"
@@ -589,6 +607,8 @@ define_root(){
 		
 		echo_info " Copy skeleton to $newroot/root/"
 		cp -rT "$newroot/etc/skel/" "$newroot/root/"
+		
+		chmod 0700 "$newroot/root"
 		
 		echo_info " You need to define root password"
 		pass_root
