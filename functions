@@ -1022,7 +1022,7 @@ syslinux_install(){
 syslinux_edit(){
 	echo_display " Do you want edit syslinux.cfg [y|n]"
 	reply_answer
-	if [[ rc == 0 ]]; then
+	if [[ "$rc" == 0 ]]; then
 		rc=""
 		check_editor
 		"$editor" "/boot/syslinux/syslinux.cfg"
@@ -1031,7 +1031,7 @@ syslinux_edit(){
 
 syslinux_menu(){
 
-	locale step=100 options=""
+	local step=100 options=""
 
 	while [[ "$step" != 5 ]]; do
 		clear

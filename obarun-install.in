@@ -38,7 +38,7 @@ echo_info " Do you want to update obarun-install package? [y|n]"
 
 reply_answer
 
-if [[ $rc == 0 ]]; then
+if [[ "$rc" == 0 ]]; then
 	rc=""
 	pac_update  || die " Impossible to update"
 else
