@@ -32,6 +32,21 @@ trap "clean_install" EXIT ERR QUIT KILL STOP INT
 
 ##		Let's go
 
+##		Update package or not
+
+echo_info " Do you want to update obarun-install package? [y|n]"
+
+reply_answer
+
+if [[ $rc == 0 ]]; then
+	rc=""
+	pac_update  || die " Impossible to update"
+else
+	rc=""
+	echo_retry " Some functionalities will cannot working properly without updating"
+	sleep 2
+fi
+
 main_menu
 
 

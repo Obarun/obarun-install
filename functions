@@ -39,6 +39,8 @@ hostname=""
 locale="" 
 locale_rc=""
 pack=0
+rc=""
+git_addr="https://github.com/Obarun/obarun-install.git"
 
 ## 		Information display by the script 
 
@@ -110,6 +112,82 @@ rem_usertmp(){
 	echo_info " Removing user : usertmp"
 	userdel -r usertmp
 	sed -i '/usertmp/d' /etc/sudoers
+}
+
+##		Update package automaticaly
+
+##		Update package automaticaly
+
+pac_update(){
+	local status pkgname build_dir
+	pkgname="obarun-install"
+	dir=`pwd`
+	
+	# make build_dir directory
+	make_build_dir(){
+		if ! [ -d "$dir/.build" ]; then
+			echo_info " Create necessary directory"
+			mkdir -p -m0755 "$dir/.build"
+			build_dir="$dir/.build"
+		else
+			build_dir="$dir/.build"
+		fi
+	}
+	
+	# check if pkgbuild exist
+	copy_pkgbuild(){
+		echo_info " Copy PKGBUILD to ${green}[$build_dir/$pkgname]${reset}"
+		cp -f "$dir"/.PKGBUILD "$build_dir/$pkgname/PKGBUILD"
+	}
+	
+	# make package
+	make_package(){
+		user_tmp
+		copy_pkgbuild || die " Impossible to copy .PKGBUILD"
+		chown -R usertmp:users "$build_dir"
+		cd "$build_dir/$pkgname"
+		echo_info " Launch makepkg and install the new version if exist"
+		sudo -u usertmp makepkg -Cfi --nosign --noconfirm --needed
+		sleep 2
+	}
+	
+	# check current version 
+	check_version(){
+		cd "$build_dir/$pkgname"
+		local curr_version git_version
+		curr_version=$(pacman -Qi obarun-install | grep "Version" | awk -F": " '{print $2}' | sed 's:-1::')
+		git_version=$(git rev-parse --short HEAD)
+	
+		if ! [[ "$curr_version" == "$git_version" ]]; then
+			echo_info " $pkgname is out of date, updating please wait"
+			make_package
+		fi
+	}	
+		
+	# check git repositories
+	check_update(){
+		cd "$build_dir/$pkgname"
+		status=$(git pull origin 2>/dev/null)
+		if [[ $status == "Already up-to-date." ]]; then
+			echo_valid " $status Nothing to do"
+			sleep 2
+		else
+			echo_info " $pkgname is out of date, updating please wait"
+			make_package || die " Impossible to make the package"
+		fi
+	}
+	
+	make_build_dir
+	
+	if ! [ -d "$build_dir/$pkgname" ]; then
+		cd "$build_dir"
+		echo_info " Clone repository form ${green}[$git_addr]${reset}"
+		git clone "$git_addr"
+		make_package || die " Impossible to make the package"
+	else
+		check_version || die " Impossible to check the current version"
+		check_update  || die " Impossible to udpdate $pkgname"
+	fi	
 }
 
 ## 		Create needed directory
@@ -240,8 +318,8 @@ edit_customize_chroot(){
 ## 		Create temporary users for yaourt
 
 user_tmp(){
-	if [[ $(awk -F':' '{ print $1}' /etc/passwd | grep usertmp) </dev/null ]]; then
-		echo_info " Create a temporary user needed to install AUR packages"
+	if ! [[ $(awk -F':' '{ print $1}' /etc/passwd | grep usertmp) ]]; then
+		echo_info " Create a temporary user needed for the scripts"
 			if [[ -e /etc/sudoers ]]; then
 				# declaring usetmp on adm group is certainly a bad idea
 				useradd -m -g users -G "wheel,disk,storage,optical,floppy,adm,network" -s /bin/bash usertmp || die " Impossible to create user : usertmp"
@@ -909,8 +987,8 @@ pass_user(){
 }
 
 ##		Reply functions
-## return 0 for yes
-## return 1 for no
+## return rc=0 for yes
+## return rc=1 for no
 reply_answer(){
 	local reply
 	read reply
@@ -919,9 +997,9 @@ reply_answer(){
 		read reply
 	done
 	if [ "$reply" == "y" ]; then
-		return 0
+		rc=0
 	else
-		return 1
+		rc=1
 	fi	
 }
 	
@@ -944,14 +1022,10 @@ syslinux_install(){
 }
 
 syslinux_edit(){
-	local reply
 	echo_display " Do you want edit syslinux.cfg [y|n]"
-	read reply
-	while [[ ! "$reply" = @(y|n) ]]; do
-		answer
-		read reply
-	done
-	if [ $reply = y ]; then
+	reply_answer
+	if [[ rc == 0 ]]; then
+		rc=""
 		check_editor
 		"$editor" "/boot/syslinux/syslinux.cfg"
 	fi
