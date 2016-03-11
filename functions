@@ -116,8 +116,6 @@ rem_usertmp(){
 
 ##		Update package automaticaly
 
-##		Update package automaticaly
-
 pac_update(){
 	local status pkgname build_dir
 	pkgname="obarun-install"
@@ -159,8 +157,8 @@ pac_update(){
 		git_version=$(git rev-parse --short HEAD)
 	
 		if ! [[ "$curr_version" == "$git_version" ]]; then
-			echo_info " $pkgname is out of date, updating please wait"
-			make_package
+			check_update || die " Impossible to udpdate $pkgname"
+			make_package || die " Impossible to make the package"
 		fi
 	}	
 		
@@ -169,7 +167,7 @@ pac_update(){
 		cd "$build_dir/$pkgname"
 		status=$(git pull origin 2>/dev/null)
 		if [[ $status == "Already up-to-date." ]]; then
-			echo_valid " $status Nothing to do"
+			echo_valid " Git $status Nothing to do"
 			sleep 2
 		else
 			echo_info " $pkgname is out of date, updating please wait"
@@ -186,7 +184,7 @@ pac_update(){
 		make_package || die " Impossible to make the package"
 	else
 		check_version || die " Impossible to check the current version"
-		check_update  || die " Impossible to udpdate $pkgname"
+		check_update || die " Impossible to udpdate $pkgname"
 	fi	
 }
 
