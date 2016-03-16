@@ -374,6 +374,7 @@ check_pac_needed(){
 ##		Select packages list
 
 select_list(){
+	local list
 	check_editor
 	pac_list=$(ls "$gen_dir"/"$config_dir"/package_list/)
 	pac_list+=" Exit"
