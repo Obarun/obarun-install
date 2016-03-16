@@ -292,10 +292,10 @@ choose_cache(){
 		read -e cache_dir
 	done
 	# the directory must be not empty, may be bug here
-	while [[ $(ls $cache_dir | grep "pkg.tar.xz") = "" ]]; do
-		echo_retry " Is not a valid directory for pacman, please retry:"
-		read -e cache_dir
-	done
+	#while [[ $(ls $cache_dir | grep "pkg.tar.xz") = "" ]]; do
+	#	echo_retry " Is not a valid directory for pacman, please retry:"
+	#	read -e cache_dir
+	#done
 	echo_valid " Your cache directory is now : $cache_dir"
 }
 
