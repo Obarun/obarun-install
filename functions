@@ -283,15 +283,15 @@ choose_dir(){
 
 choose_cache(){
 	echo_display " Enter the path for your own cache directory"
-	read cache_dir
+	read -e cache_dir
 	while [[ ! -d "$cache_dir" ]]; do
 		echo_retry " $cache_dir is not a directory, please retry:"
-		read cache_dir
+		read -e cache_dir
 	done
 	# the directory must be not empty, may be bug here
 	while [[ $(ls $cache_dir | grep "pkg.tar.xz") = "" ]]; do
 		echo_retry " Is not a valid directory for pacman, please retry:"
-		read cache_dir
+		read -e cache_dir
 	done
 	echo_valid " Your cache directory is now : $cache_dir"
 }
@@ -336,16 +336,16 @@ user_tmp(){
 
 rootdir(){	
 	echo_display " Enter your root directory :"
-	read newroot
+	read -e newroot
 	
 	until [[ -d "$newroot" ]]; do
 		echo_retry " This is not a directory, please retry :"
-		read newroot
+		read -e newroot
 	done
 	
 	while ! mountpoint -q "$newroot"; do
 		echo_retry " This is not a valide mountpoint, please retry :"
-		read newroot
+		read -e newroot
 	done
 	
 	echo_valid " Your root directory for installation is now : $newroot"
