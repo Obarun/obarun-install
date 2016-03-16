@@ -245,15 +245,18 @@ check_elements(){
 ## 		Select, check editor
 
 select_editor(){
-	editors_list=("nano" "vi" "mcedit");
+	editors_list=("nano" "vi" "mcedit" "Exit");
 	echo_display " Select your editor :"
 	select editor in "${editors_list[@]}"; do
-		if check_elements "$editor" "${editors_list[@]}"; then
-			echo_valid " Your editor is now : $editor"
-		break
-		else 
-			echo_retry " Invalid option, enter 1 or 2 :"
-		fi
+		case "$editor" in
+			Exit)break;;
+			*)if check_elements "$editor" "${editors_list[@]}"; then
+					echo_valid " Your editor is now : $editor"
+					break
+			  else 
+					echo_retry " Invalid number, retry :"
+			  fi
+		esac
 	done
 }
 
