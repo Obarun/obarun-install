@@ -127,6 +127,7 @@ rem_usertmp(){
 ##		Update package automaticaly
 
 pac_update(){
+	echo_display " Check obarun-install version"
 	local status pkgname build_dir
 	pkgname="obarun-install"
 	dir=`pwd`
@@ -134,7 +135,7 @@ pac_update(){
 	# make build_dir directory
 	make_build_dir(){
 		if ! [ -d "$dir/.build" ]; then
-			echo_display " Create necessary directory"
+			echo_notvalid " Create necessary directory"
 			mkdir -p -m0755 "$dir/.build"
 			build_dir="$dir/.build"
 		else
@@ -144,7 +145,7 @@ pac_update(){
 	
 	# check if pkgbuild exist
 	copy_pkgbuild(){
-		echo_display " Copy PKGBUILD to ${green}[$build_dir/$pkgname]${reset}"
+		echo_notvalid " Copy PKGBUILD to ${green}[$build_dir/$pkgname]${reset}"
 		cp -f "$dir"/.PKGBUILD "$build_dir/$pkgname/PKGBUILD"
 	}
 	
@@ -154,7 +155,7 @@ pac_update(){
 		copy_pkgbuild || die " Impossible to copy .PKGBUILD"
 		chown -R usertmp:users "$build_dir"
 		cd "$build_dir/$pkgname"
-		echo_display " Launch makepkg and install the new version if exist"
+		echo_notvalid " Launch makepkg and install the new version if exist"
 		sudo -u usertmp makepkg -Cfi --nosign --noconfirm --needed
 		sleep 2
 	}
@@ -189,7 +190,7 @@ pac_update(){
 	
 	if ! [ -d "$build_dir/$pkgname" ]; then
 		cd "$build_dir"
-		echo_display " Clone repository form ${green}[$git_addr]${reset}"
+		echo_notvalid " Clone repository form ${green}[$git_addr]${reset}"
 		git clone "$git_addr"
 		make_package || die " Impossible to make the package"
 	else
