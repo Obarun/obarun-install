@@ -85,7 +85,15 @@ die (){
 ## 		Clean on exit
 
 clean_install(){
+	
+	# make sure that all process are killed
+	# before umounting 
+	pkill haveged
+	pkill gpg-agent
+	pkill dirmngr
+	
 	check_mounted
+	
 	if [[ "$file_mounted" != "" ]]; then
 		echo_info " Umount filesystem in $newroot"
 		umount -R $newroot/{proc,sys,dev,tmp,run}
@@ -103,7 +111,6 @@ clean_install(){
 	if [[  -e "$newroot/etc/customizeChroot" ]]; then
 		rm "$newroot/etc/customizeChroot" || die " File customizeChroot not exist"
 	fi
-	
 	
 	exit
 }
@@ -508,20 +515,7 @@ copy_file(){
 ##		Sync database
 
 sync_data(){
-	echo_info " Check if gpg key exist on [$gpg_dir]"
-	if ! pacman-key -u --gpgdir "$gpg_dir" &>/dev/null; then
-		echo_info " Gpg doesn't exist on [$gpg_dir], create it..."
-		pac_key "$gpg_dir"
-	else
-		echo_valid " Gpg key exist, Refresh it..."
-		pacman-key -u --gpgdir "$gpg_dir"
-		# paranoia here : make sure Eric Vidal key exist
-		if ! pacman-key --list-keys 7B45DAAC --gpgdir "$gpg_dir" &>/dev/null; then
-			echo_info " Add Eric Vidal gpg signature, please wait"
-			pacman-key -r 7B45DAAC $gpg_opts
-			pacman-key --lsign-key 7B45DAAC $gpg_opts
-		fi 
-	fi
+	
 	echo_info " Synchronize database"
 	pacman -Sy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"
 	
@@ -534,16 +528,8 @@ sync_data(){
 ##		Install packages if pack = 0 otherwise call resume_install function
 
 install_pack(){
+	
 	if [[ "$pack" == 0 ]]; then
-		echo_info " Check if gpg signature exist on [$gpg_dir]"
-		if ! pacman-key -u --gpgdir "$gpg_dir" &>/dev/null; then
-			echo_info " Gpg doesn't exist on [$gpg_dir], create it..."
-			pac_key "$gpg_dir"
-		else
-			echo_info " Refresh gpg before install on [$gpg_dir]"
-			pacman-key -u --gpgdir "$gpg_dir"
-		fi
-				
 		echo_info " Install packages from lists"
 		pac_install || die " Impossible to install packages from repository" 
 		aur_install || die " Impossible to install packages from AUR"
@@ -584,6 +570,7 @@ resume_install(){
 ##		Generate key
 
 pac_key(){
+	
 	local gpg_opts
 	
 	if ! [ -z "$1" ]; then
@@ -593,30 +580,49 @@ pac_key(){
 	echo_info " Start pacman-key"
 	haveged -w 1024
 	
-	# pacman-key -r failed without /root/.gnupg
-	# create it by dirmngr
-	# TODO: find a turn around
-	if ! [ -d /root/.gnupg/ ]; then
-		dirmngr &>/dev/null & pkill dirmngr
-	fi
-	
 	pacman-key --init $gpg_opts
 	pacman-key --populate archlinux $gpg_opts
 	
+	# unset gpg_opts
+	gpg_opts=
+}
+
+check_gpg(){
+	
+	local gpg_opts
+	
+	if ! [ -z "$1" ]; then
+		gpg_opts="--gpgdir $1"
+	fi
+	# pacman-key -r failed without /root/.gnupg
+	# create it by dirmngr
+	# TODO: find a turn around
+	if ! [ -d /root/.gnupg ]; then
+		dirmngr &>/dev/null & pkill dirmngr
+	fi
+	
+	echo_info " Check if gpg key exist"	
+	if ! pacman-key -u $gpg_opts &>/dev/null; then
+		echo_info " Gpg doesn't exist on, create it..."
+		if ! [ -z $gpg_opts ]; then
+			pac_key "$gpg_dir"
+		else
+			pac_key
+		fi
+	else
+		echo_valid " Gpg key exist, Refresh it..."
+		pacman-key -u $gpg_opts
+	fi
+	
+	# TODO : make a function to let the choice at user to add or not Eric vidal key
+	# or adding a personal key
+	echo_info " Check if Eric Vidal gpg signature exist"
 	if ! pacman-key --list-keys 7B45DAAC $gpg_opts &>/dev/null; then
 		echo_info " Add Eric Vidal gpg signature, please wait"
 		pacman-key -r 7B45DAAC $gpg_opts
 		pacman-key --lsign-key 7B45DAAC $gpg_opts
-	fi
-	pkill haveged
-	pkill gpg-agent
-	pkill dirmngr
+	fi 
 	
-	if [ -z "$1" ]; then
-		echo_info " Change pacman.conf configuration"
-		sed -i "s:SigLevel = Never.*#:SigLevel = Required DatabaseOptional:" /etc/pacman.conf
-		sed -i "s:#SigLevel = PackageRequired:SigLevel = PackageRequired:" /etc/pacman.conf
-	fi
 	# unset gpg_opts
 	gpg_opts=
 }
@@ -717,6 +723,7 @@ install_system(){
 	mount_dir
 	user_tmp
 	copy_file
+	check_gpg "$gpg_dir"
 	sync_data
 	check_pac_needed
 	install_pack
