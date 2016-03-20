@@ -41,6 +41,7 @@ reply_answer
 if [[ "$rc" == 0 ]]; then
 	rc=""
 	pac_update  || die " Impossible to update"
+	source `pwd`/functions
 else
 	rc=""
 	echo_retry " Some functionalities will cannot working properly without updating"
