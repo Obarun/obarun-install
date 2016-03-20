@@ -34,7 +34,7 @@ trap "clean_install" EXIT ERR QUIT KILL STOP INT
 
 ##		Update package or not
 
-echo_info " Do you want to update obarun-install package? [y|n]"
+echo_display " Do you want to update obarun-install package? [y|n]"
 
 reply_answer
 
