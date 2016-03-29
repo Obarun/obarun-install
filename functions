@@ -10,6 +10,7 @@ export TMPDIR=
 
 ##		Shell color 
 
+unset bold reset red bred green bgreen yellow byellow blue bblue
 bold=$(tput bold)
 reset=$(tput sgr0)
 red=$(tput setaf 1)
@@ -20,6 +21,45 @@ yellow=$(tput setaf 3)
 byellow=${bold}$(tput setaf 3)
 blue=$(tput setaf 4)
 bblue=${bold}$(tput setaf 4)
+readonly bold reset red bred green bgreen yellow byellow blue bblue
+
+## 		Information display by the script 
+
+echo_bold(){
+	local msg=$1; shift 
+	printf "${bold}${msg}${reset}\n" "${@}" >&1
+}
+echo_info(){
+	local msg=$1; shift 
+	printf "${byellow}==>>${msg} ${reset}\n" "${@}" >&1
+}
+echo_info_menu(){
+	local msg=$1; shift 
+	printf "${byellow}${msg} ${reset}\n" "${@}" >&1
+}
+echo_retry(){
+	local msg=$1; shift 
+	printf "${bblue}==>>${msg} ${reset}\n" "${@}" >&1
+}
+echo_valid(){
+	local msg=$1; shift 
+	printf "${bgreen}    ->${msg} ${reset}\n" "${@}" >&1
+}
+echo_notvalid(){
+	local msg=$1; shift 
+	printf "${byellow}    ->${msg} ${reset}\n" "${@}" >&1
+}
+echo_display(){
+	local msg=$1; shift 
+	printf "${bold}==>>${msg} ${reset}\n" "${@}" >&1
+}
+echo_error(){
+	local msg=$1; shift 
+	printf "${bred}    ->${msg} ${reset}\n" "${@}" >&2
+}
+answer(){
+	echo_retry " Please answer y or n :"
+}
 
 ## 		Some variables
 
@@ -41,35 +81,6 @@ locale_rc=""
 pack=0
 rc=""
 git_addr="https://github.com/Obarun/obarun-install.git"
-
-## 		Information display by the script 
-
-echo_bold(){
-	echo "${bold}${1}${reset}"
-}
-echo_info(){
-	echo "${byellow}==>>${1}${reset}"
-}
-echo_info_menu(){
-	echo "${byellow}${1}${reset}"
-}
-echo_retry(){
-	echo "${bblue}==>>${1}${reset}"
-}
-echo_valid(){
-	echo "${bgreen}    ->${1}${reset}"
-}
-echo_notvalid(){
-	echo "${byellow}    ->${1}${reset}"
-}
-echo_display(){
-	echo "${bold}==>>${1}${reset}"
-}
-answer(){
-	echo_retry " Please answer y or n :"
-}
-
-
 
 ## 		Exit
 
