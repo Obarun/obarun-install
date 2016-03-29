@@ -139,9 +139,10 @@ rem_usertmp(){
 
 pac_update(){
 	echo_display " Check obarun-install version"
-	local status pkgname build_dir
+	local status pkgname build_dir rc
 	pkgname="obarun-install"
 	dir=`pwd`
+	rc=0
 	
 	# make build_dir directory
 	make_build_dir(){
@@ -171,19 +172,6 @@ pac_update(){
 		sleep 2
 	}
 	
-	# check current version 
-	check_version(){
-		cd "$build_dir/$pkgname"
-		local curr_version git_version
-		curr_version=$(pacman -Qi obarun-install | grep "Version" | awk -F": " '{print $2}' | sed 's:-1::')
-		git_version=$(git rev-parse --short HEAD)
-	
-		if ! [[ "$curr_version" == "$git_version" ]]; then
-			check_update || die " Impossible to udpdate $pkgname"
-			#make_package || die " Impossible to make the package"
-		fi
-	}	
-		
 	# check git repositories
 	check_update(){
 		cd "$build_dir/$pkgname"
@@ -192,11 +180,35 @@ pac_update(){
 			echo_valid " Git $status Nothing to do"
 			sleep 2
 		else
-			echo_display " $pkgname is out of date, updating please wait"
-			make_package || die " Impossible to make the package"
+			rc=1
 		fi
 	}
 	
+	# check current version 
+	check_version(){
+		cd "$build_dir/$pkgname"
+		local curr_version git_version
+		curr_version=$(pacman -Qi obarun-install | grep "Version" | awk -F": " '{print $2}' | sed 's:-1::')
+		git_version=$(git rev-parse --short HEAD)
+		
+		check_update || die " Impossible to udpdate $pkgname"
+		
+		if [[ $rc == 1 ]]; then
+			unset rc
+			echo_display " $pkgname is out of date, updating please wait"
+			make_package || die " Impossible to make the package"
+			rc=1
+		fi
+		if ! [[ "$curr_version" == "$git_version" ]]; then
+			if [[ $rc == 1 ]]; then
+				unset rc
+				break
+			else
+				make_package || die " Impossible to make the package"
+			fi
+		fi
+	}	
+		
 	make_build_dir
 	
 	if ! [ -d "$build_dir/$pkgname" ]; then
@@ -206,7 +218,6 @@ pac_update(){
 		make_package || die " Impossible to make the package"
 	else
 		check_version || die " Impossible to check the current version"
-		check_update || die " Impossible to udpdate $pkgname"
 	fi	
 }
 
