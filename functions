@@ -21,7 +21,7 @@ yellow=$(tput setaf 3)
 byellow=${bold}$(tput setaf 3)
 blue=$(tput setaf 4)
 bblue=${bold}$(tput setaf 4)
-readonly bold reset red bred green bgreen yellow byellow blue bblue
+#readonly bold reset red bred green bgreen yellow byellow blue bblue
 
 ## 		Information display by the script 
 
@@ -180,7 +180,7 @@ pac_update(){
 	
 		if ! [[ "$curr_version" == "$git_version" ]]; then
 			check_update || die " Impossible to udpdate $pkgname"
-			make_package || die " Impossible to make the package"
+			#make_package || die " Impossible to make the package"
 		fi
 	}	
 		
