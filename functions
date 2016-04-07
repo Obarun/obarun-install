@@ -376,18 +376,26 @@ user_tmp(){
 rootdir(){	
 	echo_display " Enter your root directory :"
 	read -e newroot
+	local rc
+	rc=${1:-0}
+	echo_bold $rc
 	
 	until [[ -d "$newroot" ]]; do
 		echo_retry " This is not a directory, please retry :"
 		read -e newroot
 	done
-	
-	while ! mountpoint -q "$newroot"; do
-		echo_retry " This is not a valide mountpoint, please retry :"
-		read -e newroot
-	done
-	
-	echo_valid " Your root directory for installation is now : $newroot"
+	if (( ! rc )); then
+		while ! mountpoint -q "$newroot"; do
+			echo_retry " This is not a valide mountpoint, please retry :"
+			read -e newroot
+		done
+		unset rc
+	fi
+	if (( ! rc )); then
+		echo_valid " Your root directory for installation is now : $newroot"
+	else 
+		echo_valid " The directory to copy is : $newroot"
+	fi
 }
 
 ## Check if needed packages is installed
@@ -784,7 +792,7 @@ main_menu(){
 
 local step=100
 
-while [[ "$step" !=  13 ]]; do
+while [[ "$step" !=  14 ]]; do
 	clear
 	echo_bold ""
 	echo_bold ""
@@ -819,14 +827,15 @@ while [[ "$step" !=  13 ]]; do
 	echo_bold " 9  -  Resume an aborted installation"	 	
 	echo_bold ""
 	echo_info_menu "***************************************************************************************"
-	echo_info_menu "                            Edition"
+	echo_info_menu "                            Expert mode"
 	echo_info_menu "***************************************************************************************"
 	echo_bold ""
 	echo_bold " 10 -  Edit the script customizeChroot"
 	echo_bold " 11 -  Launch a shell on ${green}[$newroot]${reset}${bold} directory"
 	echo_bold " 12 -  Browse ${green}[$newroot]${reset}${bold} with Midnight Commander"
+	echo_bold " 13 -  Make an iso"
 	echo_bold ""
-	echo_bold " ${red}13 -  Exit installation script"
+	echo_bold " ${red}14 -  Exit installation script"
 	echo_bold ""
 	echo_display " Enter your choice :";read  step
 
@@ -844,7 +853,8 @@ while [[ "$step" !=  13 ]]; do
 			10)	edit_customize_chroot;;
 			11) call_shell;;
 			12)	mc_newroot;;
-			13) echo_display " Exiting"
+			13) echo_display " under development, not available";; #iso_menu;;
+			14) echo_display " Exiting"
 				exit;;
 			*) echo_retry " Invalid number, Please retry: "
 		esac
@@ -1132,4 +1142,110 @@ syslinux_menu(){
 	done
 	
 	syslinux_install "$options"
+}
+
+
+#####################################		Functions for making an iso
+
+iso_menu(){
+	
+	local step=100
+
+while [[ "$step" !=  12 ]]; do
+	clear
+	echo_bold ""
+	echo_bold ""
+	echo_info_menu "**************************************************************"
+	echo_info_menu "              Iso menu"
+	echo_info_menu "**************************************************************"
+	echo_bold ""
+	echo_bold " 1  -  Choose directory to copy on iso ${green}[$newroot]"
+	echo_bold " 2  -  Set iso name ${green}[$iso_name]"
+	echo_bold " 3  -  Set iso version ${green}[$iso_version]"
+	echo_bold " 4  -  Set iso label ${green}[$iso_label]"
+	echo_bold " 5  -  Set iso publisher ${green}[$iso_publisher]"
+	echo_bold " 6  -  Set application name for the iso ${green}[$iso_application]"
+	echo_bold " 7  -  Set installation directory inside iso ${green}[$install_dir]"
+	echo_bold " 8  -  Set directory where the iso is saved ${green}[$out_dir]"
+	echo_bold " 9  -  Set SquashFS image mode (img or sfs) ${green}[$sfs_mode]"
+	echo_bold " 10 -  Set SquashFS compression type (gzip, lzma, lzo, xz) ${green}[$sfs_comp]"
+	echo_bold ""
+	echo_bold " 11  -  Start building"
+	echo_bold ""
+	echo_bold " ${red}12  -  Return to the main menu"
+	echo_bold ""
+	echo_bold ""
+	echo_display " Enter your choice :";read  step
+
+		case "$step" in 
+			1)	rootdir 1;;
+			2)	define_iso_variable "iso name" "iso_name";; 
+			3)	define_iso_variable "iso version" "iso_version";; 
+			4)	define_iso_variable "iso label" "iso_label";; 
+			5)	define_iso_variable "iso publisher" "iso_publisher";; 
+			6)	define_iso_variable "application name" "iso_application";;
+			7)	define_iso_variable "installation directory" "install_dir";; 
+			8)	define_iso_variable "output directory" "out_dir";; 
+			9)	define_iso_variable "image mode" "sfs_mode";; 
+			10)	define_iso_variable "compression type" "sfs_comp";; 
+			11)	echo_display " Start building iso"
+				break;;
+			12)	exit;;
+			*) echo_retry " Invalid number, please retry:"
+		esac
+		echo_info " Press enter to return to the customizeChroot menu"
+		read enter 
+done
+}
+
+define_iso_variable(){
+	local msg variable set
+	msg="$1"
+	variable="$2"
+	
+	echo_display " Enter the $msg"
+	read -e set
+	
+	while [[ -z $set ]]; do
+		echo_retry " Empty value, please retry"
+		read set
+	done
+	
+	case $variable in
+		iso_name)
+			iso_name="${set}"
+			echo_valid " Iso name is now : $set";;
+		iso_version)
+			iso_version="$set"
+			echo_valid " Iso version is now : $set";;
+		iso_label)
+			iso_label="$set"
+			echo_valid " Iso label is now : $set";;
+		iso_publisher)
+			iso_publisher="$set"
+			echo_valid " Iso publisher is now : $set";;
+		iso_application)
+			iso_application="$set"
+			echo_valid " Iso application is now : $set";;
+		install_dir)
+			install_dir="$set"
+			echo_valid " Intallation directory is now : $set";;
+		out_dir)
+			out_dir="$set"
+			echo_valid " Output directory is now : $set";;
+		sfs_mode)
+			while [[ $set != @(img|sfs) ]]; do
+				echo_retry " sfs_mode must be img or sfs, please retry"
+				read set
+			done
+			sfs_mode="$set"
+			echo_valid " Sfs mode is now : $set";;
+		sfs_comp)
+			while [[ $set != @(gzip|lzma|lzo|xz) ]]; do
+				echo_retry " sfs_comp must be gzip or lzma or lzo or xz, please retry"
+				read set
+			done
+			sfs_comp="$set"
+			echo_valid " Sfs compression is now : $set";;
+	esac
 }
