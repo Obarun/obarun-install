@@ -6,3 +6,4 @@ pkg/
 *.tar.*
 obarun-install/
 .gitignore
+.build/
