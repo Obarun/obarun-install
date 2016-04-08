@@ -4,9 +4,10 @@
 # <eric@obarun.org> wrote this file.  As long as you retain this notice you
 # can do whatever you want with this stuff. If we meet some day, and you think
 # this stuff is worth it, you can buy me a beer in return.   Eric Vidal
+
 shopt -s extglob
 
-export TMPDIR=
+#export TMPDIR=
 
 ##		Shell color 
 
@@ -61,12 +62,14 @@ answer(){
 	echo_retry " Please answer y or n :"
 }
 
-## 		Some variables
+## 		Some variables for installation
 
+home_path=$(readlink -f ${0%/*})
 newroot="/mnt"
 editor="mcedit"
+dir="$home_path"
 config_dir="openbox"
-gen_dir=`pwd`/config
+gen_dir="$dir/config"
 cache_dir="/var/cache/pacman/pkg"
 yaourt_cache="$newroot/var/cache/pacman/pkg" 
 tmp_yaourt="$newroot/tmp/"
@@ -81,6 +84,28 @@ locale_rc=""
 pack=0
 rc=""
 git_addr="https://github.com/Obarun/obarun-install.git"
+
+##		Some variables for making iso
+
+iso_root="$newroot"
+iso_name=obarun
+iso_version=v0.5.2
+iso_label="OBARUN_$(date +%Y)-$iso_version"
+install_dir=arch ### directory inside iso
+base_dir="${home_path}"
+work_dir="${base_dir}/work"
+out_dir="${base_dir}/out"
+make_iso="${base_dir}/make_iso"
+arch=$(uname -m)
+verbose="-v"
+d_verbose="yes"
+quiet="y"
+run_cmd=""
+pkg_list=""
+iso_publisher="Obarun Linux <http://www.obarun.org>"
+iso_application="Obarun Linux Live/Rescue CD"
+sfs_mode="sfs"
+sfs_comp="xz"
 
 ## 		Exit
 
@@ -106,11 +131,11 @@ clean_install(){
 	pkill gpg-agent
 	pkill dirmngr
 	
-	check_mounted
-	
-	if [[ "$file_mounted" != "" ]]; then
-		echo_valid " Umount filesystem in $newroot"
-		umount -R $newroot/{proc,sys,dev,tmp,run}
+	if [[ $(mount | grep "$newroot"/proc) ]]; then
+		mount_umount "$newroot" "umount"
+	fi
+	if [[ $(mount | grep "$work_dir/airootfs/proc") ]]; then
+		mount_umount "$work_dir/airootfs" "umount"
 	fi
 	if [[ $(awk -F':' '{ print $1}' /etc/passwd | grep usertmp) >/dev/null ]]; then
 		echo_valid " Removing user usertmp"
@@ -129,6 +154,69 @@ clean_install(){
 	exit
 }
 
+##		check if $newroot is a valid mountpoint
+
+check_mountpoint(){
+	if ! mountpoint -q "$newroot"; then
+			echo_retry " This is not a valid mountpoint"
+			echo_retry " You need to mount a device on $newroot or choose another directory"
+			(sleep 4) && echo_info " Returning to the main_menu" && (sleep 1) && main_menu
+	fi
+}
+
+
+## 		Mount/unmount necessary directory
+# $1 name of directory to check 
+# $2 action to do : mount/umount
+
+mount_umount(){
+	local rep action
+	rep="$1"
+	action="$2"
+	
+	_mount(){
+		echo_notvalid " Mounting $4"
+		mount "$@" 
+	}
+	
+	_umount(){
+		echo_notvalid " Unmounting $1"
+		umount $@
+	}
+			
+	if [[ "$action" == "mount" ]]; then
+		echo_display " Check mounted filesystem on $rep"
+		if ! [[ $(mount | grep "$rep"/proc) ]]; then
+			_mount -t proc proc "$rep/proc" -o nosuid,noexec,nodev 
+			_mount -t sysfs sys "$rep/sys" -o nosuid,noexec,nodev 
+			_mount -t devtmpfs dev "$rep/dev" -o mode=0755,nosuid
+			_mount -t devpts devpts "$rep/dev/pts" -o mode=0620,gid=5,nosuid,noexec
+			_mount -t tmpfs shm "$rep/dev/shm" -o mode=1777,nosuid,nodev
+			_mount -t tmpfs run "$rep/run" -o nosuid,nodev,mode=0755
+			_mount -t tmpfs tmp "$rep/tmp" -o mode=1777,strictatime,nodev,nosuid
+		else
+			echo_valid " Filesystem already mounted in ${rep}"
+		fi
+	fi
+	if [[ "$action" == "umount" ]]; then
+		echo_display " Check mounted filesystem"
+		if [[ $(mount | grep "$rep"/proc) ]]; then
+			_umount "$rep/proc"
+			_umount "$rep/sys"
+			_umount "$rep/dev/pts"
+			_umount "$rep/dev/shm"
+			_umount "$rep/run"
+			_umount "$rep/tmp"
+			_umount "$rep/dev"
+		else
+			echo_valid " Filesystem not mounted in ${rep}"
+		fi
+	fi
+	unset rep action
+}
+
+## 		Remove usertmp
+
 rem_usertmp(){
 	echo_display " Removing user : usertmp"
 	userdel -r usertmp
@@ -139,9 +227,8 @@ rem_usertmp(){
 
 pac_update(){
 	echo_display " Check obarun-install version"
-	local status pkgname build_dir rc
+	local status pkgname build_dir rc 
 	pkgname="obarun-install"
-	dir=`pwd`
 	rc=0
 	
 	# make build_dir directory
@@ -236,41 +323,6 @@ create_dir(){
 	fi
 }
 
-##		check if $newroot is a valid mountpoint
-
-check_mountpoint(){
-	if ! mountpoint -q "$newroot"; then
-			echo_retry " This is not a valid mountpoint"
-			echo_retry " You need to mount a device on $newroot or choose another directory"
-			(sleep 4) && echo_info " Returning to the main_menu" && (sleep 1) && main_menu
-	fi
-}
-
-##		Already mounted or not
-
-check_mounted(){
-	file_mounted=$(mount | grep "$newroot"/proc)
-}
-
-## 		Mounting necessary directory
-
-mount_dir(){
-	echo_display " Check mounted filesystem"
-	check_mounted
-	if [[ "$file_mounted" = "" ]]; then
-		echo_notvalid " Mounting filesystem in ${newroot}"
-		mount -o nosuid,noexec,nodev -t proc proc "$newroot"/proc
-		mount -o nosuid,noexec,nodev -t sysfs sys "$newroot"/sys 
-		mount -o mode=0755,nosuid -t devtmpfs dev "$newroot"/dev 
-		mount -o mode=0620,gid=5,nosuid,noexec -t devpts devpts "$newroot"/dev/pts 
-		mount -o mode=1777,nosuid,nodev -t tmpfs shm "$newroot"/dev/shm 
-		mount -o nosuid,nodev,mode=0755 -t tmpfs run "$newroot"/run 
-		mount -o mode=1777,strictatime,nodev,nosuid -t tmpfs tmp "$newroot"/tmp 
-	else
-		echo_valid " Filesystem already mounted in ${newroot}"
-	fi
-}
-
 ## 		Check list option
 
 check_elements(){
@@ -280,11 +332,14 @@ check_elements(){
 ## 		Select, check editor
 
 select_editor(){
+	local old_editor
+	old_editor="$editor"
 	editors_list=("nano" "vi" "mcedit" "Exit");
 	echo_display " Select your editor :"
 	select editor in "${editors_list[@]}"; do
 		case "$editor" in
-			Exit)break;;
+			Exit)editor="$old_editor"
+				break;;
 			*)if check_elements "$editor" "${editors_list[@]}"; then
 					echo_valid " Your editor is now : $editor"
 					break
@@ -306,9 +361,9 @@ check_editor(){
 choose_dir(){
 	dir_list=$(ls -U `pwd`/config/)
 	echo_display " Select the directory you want to use :"
-	select dir in $dir_list; do
-		if check_elements "$dir" $dir_list; then
-			config_dir="$dir"	 
+	select directory in $dir_list; do
+		if check_elements "$directory" $dir_list; then
+			config_dir="$directory"	 
 		break
 		else 
 			echo_retry " Invalid number, retry :"
@@ -372,29 +427,41 @@ user_tmp(){
 
 		
 ## 		Select root directory
+## $1 name of variable to define
+## $2 check if the functions is for define newroot or iso_root
+## need improvement for this functions
 
 rootdir(){	
+	local directory var
+	directory="$1"
+		
 	echo_display " Enter your root directory :"
-	read -e newroot
+	read -e var
 	local rc
-	rc=${1:-0}
-	echo_bold $rc
+	rc=${2:-0}
 	
-	until [[ -d "$newroot" ]]; do
+	until [[ -d "$var" ]]; do
 		echo_retry " This is not a directory, please retry :"
-		read -e newroot
+		read -e var
 	done
 	if (( ! rc )); then
-		while ! mountpoint -q "$newroot"; do
+		while ! mountpoint -q "$var"; do
 			echo_retry " This is not a valide mountpoint, please retry :"
-			read -e newroot
+			read -e var
 		done
 		unset rc
 	fi
+	case $directory in
+		newroot)
+			newroot=$var;;
+		iso_root)
+			iso_root=$var;;
+	esac
+	
 	if (( ! rc )); then
 		echo_valid " Your root directory for installation is now : $newroot"
-	else 
-		echo_valid " The directory to copy is : $newroot"
+	else
+		echo_valid " The directory to copy is : $iso_root"
 	fi
 }
 
@@ -660,7 +727,7 @@ check_gpg(){
 	
 	echo_display " Check if gpg key exist"	
 	if ! pacman-key -u $gpg_opts &>/dev/null; then
-		echo_notvalid " Gpg doesn't exist on, create it..."
+		echo_notvalid " Gpg doesn't exist, create it..."
 		if ! [ -z $gpg_opts ]; then
 			pac_key "$gpg_dir"
 		else
@@ -704,7 +771,7 @@ enter_chroot(){
 	# make sure the necessary is present before enter on chroot
 	check_mountpoint
 	create_dir
-	mount_dir
+	mount_umount "$newroot" "mount"
 	user_tmp
 	copy_file
 	copy_rootfs
@@ -719,7 +786,7 @@ enter_chroot(){
 mc_newroot(){
 	check_mountpoint
 	create_dir
-	mount_dir
+	mount_umount "$newroot" "mount"
 	SHELL=/bin/sh chroot "$newroot" /usr/bin/mc
 }
 
@@ -728,7 +795,7 @@ mc_newroot(){
 call_shell(){
 	check_mountpoint
 	create_dir
-	mount_dir
+	mount_umount "$newroot" "mount"
 	echo_info " Tape exit when you have finished"
 	if [[ -e "$newroot/usr/bin/zsh" ]]; then
 		SHELL=/bin/sh chroot "$newroot" /usr/bin/zsh 
@@ -773,7 +840,7 @@ pass_root(){
 install_system(){
 	check_mountpoint
 	create_dir
-	mount_dir
+	mount_umount "$newroot" "mount"
 	user_tmp
 	copy_file
 	check_gpg "$gpg_dir"
@@ -828,6 +895,7 @@ while [[ "$step" !=  14 ]]; do
 	echo_bold ""
 	echo_info_menu "***************************************************************************************"
 	echo_info_menu "                            Expert mode"
+	echo_info_menu "  Assumptions : the base system must be installed at least before using this mode"
 	echo_info_menu "***************************************************************************************"
 	echo_bold ""
 	echo_bold " 10 -  Edit the script customizeChroot"
@@ -835,7 +903,9 @@ while [[ "$step" !=  14 ]]; do
 	echo_bold " 12 -  Browse ${green}[$newroot]${reset}${bold} with Midnight Commander"
 	echo_bold " 13 -  Make an iso"
 	echo_bold ""
+	echo_bold ""
 	echo_bold " ${red}14 -  Exit installation script"
+	echo_bold ""
 	echo_bold ""
 	echo_display " Enter your choice :";read  step
 
@@ -845,7 +915,7 @@ while [[ "$step" !=  14 ]]; do
 			3)	edit_pacman;;
 			4)	choose_cache;;
 			5)	select_list;;
-			6)	rootdir;; # Never comment this options
+			6)	rootdir "newroot";; # Never comment this options
 			7)	install_system;;
 			8)	enter_chroot;;
 			9)	pack=1
@@ -853,7 +923,7 @@ while [[ "$step" !=  14 ]]; do
 			10)	edit_customize_chroot;;
 			11) call_shell;;
 			12)	mc_newroot;;
-			13) echo_display " under development, not available";; #iso_menu;;
+			13) enter_iso;;
 			14) echo_display " Exiting"
 				exit;;
 			*) echo_retry " Invalid number, Please retry: "
@@ -883,10 +953,16 @@ while [[ "$step" !=  8 ]]; do
 	echo_bold " 2  -  Define locale ${green}[$locale]"
 	echo_bold " 3  -  Define localtime ${green}[$zone/$subzone]"
 	echo_bold " 4  -  Create a new user ${green}[$newuser]"
-	echo_bold " 5  -  Edit rc.conf file"
-	echo_bold " 6  -  Browse with Midnight Commander"
 	echo_bold ""
-	echo_bold " 7  -  Continue the installation"
+	echo_bold " 5  -  Continue the installation"
+	echo_bold ""
+	echo_info_menu "**************************************************************"
+	echo_info_menu "                   Expert mode"
+	echo_info_menu "**************************************************************"
+	echo_bold ""
+	echo_bold " 6  -  Edit rc.conf file"
+	echo_bold " 7  -  Browse with Midnight Commander"
+	echo_bold ""
 	echo_bold ""
 	echo_bold " ${red}8  -  Return to the main menu"
 	echo_bold ""
@@ -898,10 +974,10 @@ while [[ "$step" !=  8 ]]; do
 			2)	define_locale;; 
 			3)	call_localtime;;
 			4)	define_user;;
-			5)	edit_rc_conf;;
-			6)	mc_enter;;
-			7)	echo_display " Continue installation"
+			5)	echo_display " Continue installation"
 				break;;
+			6)	edit_rc_conf;;
+			7)	mc_enter;;
 			8)	exit;;
 			*) echo_retry " Invalid number, please retry:"
 		esac
@@ -954,7 +1030,7 @@ define_locale(){
 	echo_display " Define your locale by uncomment desired line, only one line is allowed"
 	echo_info " Press enter to continue"
 	read enter
-	enter=""
+	
 	"$editor" /etc/locale.gen
 	locale-gen
 	locale=$(grep -v "#" /etc/locale.gen | awk -F " " '{ print $1 }')
@@ -1094,8 +1170,8 @@ syslinux_install(){
 syslinux_edit(){
 	echo_display " Do you want edit syslinux.cfg [y|n]"
 	reply_answer
-	if [[ "$rc" == 0 ]]; then
-		rc=""
+	if (( ! "$rc" )); then
+		unset rc
 		check_editor
 		"$editor" "/boot/syslinux/syslinux.cfg"
 	fi
@@ -1151,15 +1227,15 @@ iso_menu(){
 	
 	local step=100
 
-while [[ "$step" !=  12 ]]; do
+while [[ "$step" !=  15 ]]; do
 	clear
 	echo_bold ""
 	echo_bold ""
 	echo_info_menu "**************************************************************"
-	echo_info_menu "              Iso menu"
+	echo_info_menu "                       Iso menu"
 	echo_info_menu "**************************************************************"
 	echo_bold ""
-	echo_bold " 1  -  Choose directory to copy on iso ${green}[$newroot]"
+	echo_bold " 1  -  Choose directory to copy on iso ${green}[$iso_root]"
 	echo_bold " 2  -  Set iso name ${green}[$iso_name]"
 	echo_bold " 3  -  Set iso version ${green}[$iso_version]"
 	echo_bold " 4  -  Set iso label ${green}[$iso_label]"
@@ -1169,16 +1245,25 @@ while [[ "$step" !=  12 ]]; do
 	echo_bold " 8  -  Set directory where the iso is saved ${green}[$out_dir]"
 	echo_bold " 9  -  Set SquashFS image mode (img or sfs) ${green}[$sfs_mode]"
 	echo_bold " 10 -  Set SquashFS compression type (gzip, lzma, lzo, xz) ${green}[$sfs_comp]"
+	echo_bold " 11 -  Enable verbose ${green}[$d_verbose]"
 	echo_bold ""
-	echo_bold " 11  -  Start building"
+	echo_bold " 12 -  Start building"
 	echo_bold ""
-	echo_bold " ${red}12  -  Return to the main menu"
+	echo_info_menu "**************************************************************"
+	echo_info_menu "                      Expert mode"
+	echo_info_menu "**************************************************************"
+	echo_bold ""
+	echo_bold " 13 -  Remove the working directory ${green}[$work_dir]"
+	echo_bold " 14 -  Take a coffee"
+	echo_bold ""
+	echo_bold ""
+	echo_bold " ${red}15  -  Return to the main menu"
 	echo_bold ""
 	echo_bold ""
 	echo_display " Enter your choice :";read  step
 
 		case "$step" in 
-			1)	rootdir 1;;
+			1)	rootdir "iso_root" 1;;
 			2)	define_iso_variable "iso name" "iso_name";; 
 			3)	define_iso_variable "iso version" "iso_version";; 
 			4)	define_iso_variable "iso label" "iso_label";; 
@@ -1186,14 +1271,17 @@ while [[ "$step" !=  12 ]]; do
 			6)	define_iso_variable "application name" "iso_application";;
 			7)	define_iso_variable "installation directory" "install_dir";; 
 			8)	define_iso_variable "output directory" "out_dir";; 
-			9)	define_iso_variable "image mode" "sfs_mode";; 
-			10)	define_iso_variable "compression type" "sfs_comp";; 
-			11)	echo_display " Start building iso"
+			9)	define_iso_variable "image mode [img|sfs]" "sfs_mode";; 
+			10)	define_iso_variable "compression type [gzip|lzma|lzo|xz]" "sfs_comp";; 
+			11) define_iso_variable "option for verbosity [y|n]" "verbose";;
+			12)	echo_display " Start building iso"
 				break;;
-			12)	exit;;
+			13) clean_work_dir;;
+			14) echo_info " Under development, not available";;
+			15)	exit;;
 			*) echo_retry " Invalid number, please retry:"
 		esac
-		echo_info " Press enter to return to the customizeChroot menu"
+		echo_info " Press enter to return to the iso menu"
 		read enter 
 done
 }
@@ -1247,5 +1335,31 @@ define_iso_variable(){
 			done
 			sfs_comp="$set"
 			echo_valid " Sfs compression is now : $set";;
+		verbose)
+			reply_answer
+			if (( ! "$rc" )); then
+				unset rc
+				verbose="-v"
+				d_verbose="yes"
+				echo_valid " Verbose enabled"
+			else
+				unset rc
+				unset verbose
+				d_verbose="no"
+				echo_notvalid " Verbose disabled"
+			fi;;
 	esac
+}
+
+enter_iso(){
+	$dir/.build/iso_build/./build_iso ${verbose}
+}
+
+clean_work_dir(){
+	if [[ -d $work_dir ]]; then
+		echo_display " Removing $work_dir"
+		rm -R "$work_dir"
+	else
+		echo_display " $work_dir doesn't exist"
+	fi
 }
