@@ -31,7 +31,7 @@ package() {
 	install -Dm644 "functions" "$pkgdir/opt/obarun-install/functions"
 	install -dm755 "$pkgdir/usr/share/licenses/obarun-install/"
 	install -Dm644 "LICENSE" "$pkgdir/usr/share/licenses/obarun-install/LICENSE"
-	cp .PKGBUILD "$pkgdir/opt/obarun-install/.PKGBUILD"
+	cp .PKGBUILD "$pkgdir/opt/obarun-install/PKGBUILD"
 	
 	cp -aT "config" "$pkgdir/opt/obarun-install/config"	
 	
