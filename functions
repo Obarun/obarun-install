@@ -245,14 +245,14 @@ pac_update(){
 	# check if pkgbuild exist
 	copy_pkgbuild(){
 		echo_notvalid " Copy PKGBUILD to ${green}[$build_dir/$pkgname]${reset}"
-		cp -f "$dir"/.PKGBUILD "$build_dir/$pkgname/PKGBUILD"
+		cp -f "$build_dir/$pkgname"/.PKGBUILD "$build_dir/$pkgname/PKGBUILD"
 	}
 	
 	# make package
 	make_package(){
 		user_tmp
 		copy_pkgbuild || die " Impossible to copy .PKGBUILD"
-		chown -R usertmp:users "$build_dir"
+		chown -R usertmp:users "$build_dir/$pkgname"
 		cd "$build_dir/$pkgname"
 		echo_notvalid " Launch makepkg and install the new version if exist"
 		sudo -u usertmp makepkg -Cfi --nosign --noconfirm --needed
