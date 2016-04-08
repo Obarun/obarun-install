@@ -24,7 +24,7 @@ fi
 
 ##		Clean before exit
 
-trap "clean_install" EXIT ERR QUIT KILL STOP INT
+trap "clean_install" EXIT ERR QUIT KILL STOP INT TERM HUP
 
 ##		Must be root user 
 
@@ -34,19 +34,24 @@ trap "clean_install" EXIT ERR QUIT KILL STOP INT
 
 ##		Update package or not
 
-echo_display " Do you want to update obarun-install package? [y|n]"
+main_update(){
+	echo_display " Do you want to update obarun-install package? [y|n]"
 
-reply_answer
+	reply_answer
 
-if [[ "$rc" == 0 ]]; then
-	rc=""
-	pac_update  || die " Impossible to update"
-	source `pwd`/functions
-else
-	rc=""
-	echo_retry " Some functionalities will cannot working properly without updating"
-	sleep 2
-fi
+	if (( ! "$rc" )); then
+		unset rc
+		pac_update  || die " Impossible to update"
+		source `pwd`/functions
+	else
+		unset rc
+		echo_retry " Some functionalities will cannot working properly without updating"
+		echo_info " Press enter to continue"
+		read enter
+	fi
+}
+
+main_update
 
 main_menu
 
