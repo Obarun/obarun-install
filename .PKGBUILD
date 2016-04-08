@@ -34,5 +34,11 @@ package() {
 	cp .PKGBUILD "$pkgdir/opt/obarun-install/.PKGBUILD"
 	
 	cp -aT "config" "$pkgdir/opt/obarun-install/config"	
+	
+	install -dm755 "$pkgdir/opt/obarun-install/.build/iso_build/"
+	cp -aT ".build" "$pkgdir/opt/obarun-install/.build/iso_build"
+	
+	chmod 0744 "$pkgdir/opt/obarun-install/.build/iso_build/make_iso"
+	chmod 0744 "$pkgdir/opt/obarun-install/.build/iso_build/build_iso"
 }
 
