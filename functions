@@ -306,6 +306,8 @@ pac_update(){
 	else
 		check_version || die " Impossible to check the current version"
 	fi	
+	
+	cd "$dir"
 }
 
 ## 		Create needed directory
