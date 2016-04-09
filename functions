@@ -1247,14 +1247,14 @@ while [[ "$step" !=  15 ]]; do
 	echo_bold " 8  -  Set directory where the iso is saved ${green}[$out_dir]"
 	echo_bold " 9  -  Set SquashFS image mode (img or sfs) ${green}[$sfs_mode]"
 	echo_bold " 10 -  Set SquashFS compression type (gzip, lzma, lzo, xz) ${green}[$sfs_comp]"
-	echo_bold " 11 -  Enable verbose ${green}[$d_verbose]"
 	echo_bold ""
-	echo_bold " 12 -  Start building"
+	echo_bold " 11 -  Start building"
 	echo_bold ""
 	echo_info_menu "**************************************************************"
 	echo_info_menu "                      Expert mode"
 	echo_info_menu "**************************************************************"
 	echo_bold ""
+	echo_bold " 12 -  Enable verbose ${green}[$d_verbose]"
 	echo_bold " 13 -  Remove the working directory ${green}[$work_dir]"
 	echo_bold " 14 -  Take a coffee"
 	echo_bold ""
@@ -1275,9 +1275,9 @@ while [[ "$step" !=  15 ]]; do
 			8)	define_iso_variable "output directory" "out_dir";; 
 			9)	define_iso_variable "image mode [img|sfs]" "sfs_mode";; 
 			10)	define_iso_variable "compression type [gzip|lzma|lzo|xz]" "sfs_comp";; 
-			11) define_iso_variable "option for verbosity [y|n]" "verbose";;
-			12)	echo_display " Start building iso"
+			11)	echo_display " Start building iso"
 				break;;
+			12) define_iso_variable "option for verbosity [y|n]" "verbose";;	
 			13) clean_work_dir;;
 			14) echo_info " Under development, not available";;
 			15)	exit;;
