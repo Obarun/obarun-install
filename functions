@@ -751,6 +751,10 @@ check_gpg(){
 	
 	# unset gpg_opts
 	gpg_opts=
+	
+	pkill haveged
+	pkill gpg-agent
+	pkill dirmngr
 }
 
 ##		Generate fstab
