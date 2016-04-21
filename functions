@@ -820,7 +820,7 @@ define_root(){
 		echo_display " Copy skeleton to $newroot/root/"
 		cp -rT "$newroot/etc/skel/" "$newroot/root/"
 		
-		chmod 0700 "$newroot/root"
+		chmod 0750 "$newroot/root"
 		
 		echo_display " You need to define root password"
 		pass_root
