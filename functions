@@ -110,13 +110,13 @@ sfs_comp="xz"
 ## 		Exit
 
 die (){
-      local message code 
+      local message 
       message="$1"
-      [[ -n "$2" ]] && code="$2" || code=1
+ 
       if [[ -n "$message" ]] ; then
-        echo "${bred}==>> Error: ${message}; exit status ${code}${reset}"
+        echo "${bred}==>> Error: ${message}${reset}"
       else
-        echo "${bred}==>> Error: exiting with status ${code}${reset}"
+        echo "${bred}==>> Error: Script can not continue"
       fi
       exit 1
 }
@@ -747,14 +747,20 @@ check_gpg(){
 		echo_notvalid " Add Eric Vidal gpg signature, please wait"
 		pacman-key -r 7B45DAAC $gpg_opts
 		pacman-key --lsign-key 7B45DAAC $gpg_opts
-	fi 
+	else
+		echo_valid " Eric Vidal gpg signature already exist"
+	fi
 	
 	# unset gpg_opts
-	gpg_opts=
-	
-	pkill haveged
-	pkill gpg-agent
-	pkill dirmngr
+	unset gpg_opts
+	kill_(){
+		local k
+		for k in haveged gpg-agent dirmngr; do
+			killall -r $k 2>/dev/null
+		done
+		unset k
+	}
+	kill_
 }
 
 ##		Generate fstab
@@ -784,7 +790,7 @@ enter_chroot(){
 	define_root
 	
 	echo_display " Enter on chroot of ${newroot}"	
-	chroot "$newroot" /etc/customizeChroot || die " Failed to enter on ${newroot} or Failed to execute correctly the file"
+	chroot "$newroot" /etc/customizeChroot || die " Failed to enter on ${newroot} or Failed to execute functions customizeChroot"
 }
 
 ##		Enter in $newroot with mc
@@ -947,7 +953,7 @@ customizeChroot_menu(){
 
 local step=100
 
-while [[ "$step" !=  8 ]]; do
+while [[ "$step" !=  9 ]]; do
 	clear
 	echo_bold ""
 	echo_bold ""
@@ -968,9 +974,10 @@ while [[ "$step" !=  8 ]]; do
 	echo_bold ""
 	echo_bold " 6  -  Edit rc.conf file"
 	echo_bold " 7  -  Browse with Midnight Commander"
+	echo_bold " 8  -  Delete custo_once files"
 	echo_bold ""
 	echo_bold ""
-	echo_bold " ${red}8  -  Return to the main menu"
+	echo_bold " ${red}9  -  Return to the main menu"
 	echo_bold ""
 	echo_bold ""
 	echo_display " Enter your choice :";read  step
@@ -984,7 +991,8 @@ while [[ "$step" !=  8 ]]; do
 				break;;
 			6)	edit_rc_conf;;
 			7)	mc_enter;;
-			8)	exit;;
+			8)	clean_once_file rm "/root/tmp/obarun-install";;
+			9)	exit;;
 			*) echo_retry " Invalid number, please retry:"
 		esac
 		echo_info " Press enter to return to the customizeChroot menu"
@@ -1136,6 +1144,37 @@ pass_user(){
 		echo_retry " Password do not match, please retry"
 		passwd "$newuser"
 	done
+}
+
+clean_once_file(){
+	local action dir f_
+	action="${1}"
+	dir="${2}"
+	if [[ -d /root/tmp/obarun-install ]]; then
+		file_list=$(ls $dir/ | uniq) 
+		file_list+=" Remove_all_files"
+		file_list+=" Exit"
+		select file in $file_list; do
+			case $file in 
+				Exit)break;;
+				Remove_all_files) 	for f_ in $file_list; do
+										if [[ ! "$f_" = @(Exit|Remove_all_files) ]]; then
+											"$action" "$dir/$f_"
+										fi
+									done;;
+				*)if check_elements "$file" $file_list; then
+						"$action" "${dir}/${file}"
+						clean_once_file "$action" "$dir"				
+				else 
+					echo_retry " Invalid number, retry :"
+					clean_once_file "$action" "$dir"
+				fi
+			esac
+			break
+		done
+	else
+		echo_info " Directory /root/tmp/obarun-install does not exist"
+	fi
 }
 
 ##		Reply functions
