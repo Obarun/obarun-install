@@ -79,8 +79,9 @@ newuser=""
 zone=""
 subzone=""
 hostname=""
-locale="" 
-locale_rc=""
+keymap=""
+xkeymap=""
+locale=""
 pack=0
 rc=""
 git_addr="https://github.com/Obarun/obarun-install.git"
@@ -953,7 +954,7 @@ customizeChroot_menu(){
 
 local step=100
 
-while [[ "$step" !=  9 ]]; do
+while [[ "$step" !=  11 ]]; do
 	clear
 	echo_bold ""
 	echo_bold ""
@@ -964,20 +965,22 @@ while [[ "$step" !=  9 ]]; do
 	echo_bold " 1  -  Define hostname ${green}[$hostname]"
 	echo_bold " 2  -  Define locale ${green}[$locale]"
 	echo_bold " 3  -  Define localtime ${green}[$zone/$subzone]"
-	echo_bold " 4  -  Create a new user ${green}[$newuser]"
+	echo_bold " 4  -  Define console keymap ${green}[$keymap]"
+	echo_bold " 5  -  Define desktop keymap ${green}[$xkeymap]"
+	echo_bold " 6  -  Create a new user ${green}[$newuser]"
 	echo_bold ""
-	echo_bold " 5  -  Continue the installation"
+	echo_bold " 7  -  Continue the installation"
 	echo_bold ""
 	echo_info_menu "**************************************************************"
 	echo_info_menu "                   Expert mode"
 	echo_info_menu "**************************************************************"
 	echo_bold ""
-	echo_bold " 6  -  Edit rc.conf file"
-	echo_bold " 7  -  Browse with Midnight Commander"
-	echo_bold " 8  -  Delete custo_once files"
+	echo_bold " 8  -  Edit rc.conf file"
+	echo_bold " 9  -  Browse with Midnight Commander"
+	echo_bold " 10 -  Delete custo_once files"
 	echo_bold ""
 	echo_bold ""
-	echo_bold " ${red}9  -  Return to the main menu"
+	echo_bold " ${red}11  -  Return to the main menu"
 	echo_bold ""
 	echo_bold ""
 	echo_display " Enter your choice :";read  step
@@ -986,13 +989,15 @@ while [[ "$step" !=  9 ]]; do
 			1)	define_hostname;;
 			2)	define_locale;; 
 			3)	call_localtime;;
-			4)	define_user;;
-			5)	echo_display " Continue installation"
+			4)	define_keymap;;
+			5)	define_xkeymap;;
+			6)	define_user;;
+			7)	echo_display " Continue installation"
 				break;;
-			6)	edit_rc_conf;;
-			7)	mc_enter;;
-			8)	clean_once_file rm "/root/tmp/obarun-install";;
-			9)	exit;;
+			8)	edit_rc_conf;;
+			9)	mc_enter;;
+			10)	clean_once_file rm "/root/tmp/obarun-install";;
+			11)	exit;;
 			*) echo_retry " Invalid number, please retry:"
 		esac
 		echo_info " Press enter to return to the customizeChroot menu"
@@ -1050,18 +1055,6 @@ define_locale(){
 	locale=$(grep -v "#" /etc/locale.gen | awk -F " " '{ print $1 }')
 	echo LANG="$locale" > /etc/locale.conf
     echo LC_COLLATE=C >> /etc/locale.conf
-	locale_rc=$(grep -v "#" /etc/locale.gen | sed 's/ UTF-8//g' | awk -F "_" '{ print $1 }')
-	sed -i "s,KEYMAP=\".*$,KEYMAP=\"$locale_rc\",g" /etc/rc.conf
-	
-	# define local for root
-	echo_display " Check if /root/.xinitrc exist"
-	if [[ -e "/root/.xinitrc" ]]; then
-		locale_xinit=""
-		locale_xinit=$(grep -v "#" /etc/locale.gen | sed 's/ UTF-8//g' | awk -F "_" '{ print $1 }')
-		echo_valid " Define locale in /root/.xinitrc"
-		sed -i 's/#setxkbmap.*$/setxkbmap\ '$locale_xinit'\ \&/g' /root/.xinitrc
-		sed -i 's/setxkbmap.*$/setxkbmap\ '$locale_xinit'\ \&/g' /root/.xinitrc
-	fi
 	
 	echo_valid " Locale was created successfully"
 }
@@ -1109,7 +1102,60 @@ call_localtime(){
 		ln -sf /usr/share/zoneinfo/$zone /etc/localtime
 		sed -i "s/TIMEZONE=\".*$/TIMEZONE=\"$zone\"/g" /etc/rc.conf
 	fi
-	echo_valid " your localtime is now : $zone/$subzone"
+	echo_valid " Your localtime is now : $zone/$subzone"
+}
+
+##		Define keymap
+
+define_keymap(){
+	echo_display " Choose your console keymap"
+	local -a key_list
+	key_list=$(ls -R /usr/share/kbd/keymaps | grep "map.gz" | sed 's/\.map\.gz//g' | sort | less)
+	key_list+=" Exit"
+	select keymap in $key_list; do
+		case "$keymap" in
+			Exit)unset keymap
+				break;;
+			*)if check_elements "$keymap" $key_list; then
+				echo_valid " Your keymap is now : $keymap"
+				break
+			  else 
+				echo_retry " Invalid number, retry :"
+			  fi
+		esac
+	done
+	unset key_list
+	echo_valid " Set KEYMAP in rc.conf"
+	sed -i "s,KEYMAP=\".*$,KEYMAP=\"$keymap\",g" /etc/rc.conf
+}
+
+##		Define xkeymap
+
+define_xkeymap(){
+	echo_display " Choose your Desktop environment keymap"
+	local -a key_list
+	key_list="af al am at az ba bd be bg br bt bw by ca cd ch cm cn cz de dk ee es et eu fi fo fr gb ge gh gn gr hr hu ie il in iq ir is it jp ke kg kh kr kz la lk lt lv ma md me mk ml mm mn mt mv ng nl no np pc ph pk pl pt ro rs ru se si sk sn sy tg th tj tm tr tw tz ua us uz vn za"
+	key_list+=" Exit"
+	select xkeymap in $key_list; do
+		case "$xkeymap" in
+			Exit)unset xkeymap
+				break;;
+			*)if check_elements "$xkeymap" $key_list; then
+				echo_valid " Your Desktop keymap is now : $xkeymap"
+				break
+			  else 
+				echo_retry " Invalid number, retry :"
+			  fi
+		esac
+	done
+	unset key_list
+	# define local for root
+	echo_display " Check if /root/.xinitrc exist"
+	if [[ -e "/root/.xinitrc" ]]; then
+		echo_valid " Define locale in /root/.xinitrc"
+		sed -i 's/#setxkbmap.*$/setxkbmap\ '$xkeymap'\ \&/g' /root/.xinitrc
+		sed -i 's/setxkbmap.*$/setxkbmap\ '$xkeymap'\ \&/g' /root/.xinitrc
+	fi
 }
 
 ##		Define a new user
@@ -1128,10 +1174,8 @@ define_user(){
 	echo_valid " Create user $newuser"
 	useradd -m -g users -G "audio,floppy,log,network,rfkill,scanner,storage,optical,power,wheel,video" -s /usr/bin/zsh "$newuser"
 	if [[ -e "/home/$newuser/.xinitrc" ]]; then
-		locale_xinit=""
-		locale_xinit=$(grep -v "#" /etc/locale.gen | sed 's/ UTF-8//g' | awk -F "_" '{ print $1 }')
-		sed -i 's/#setxkbmap.*$/setxkbmap\ '$locale_xinit'\ \&/g' /home/$newuser/.xinitrc
-		sed -i 's/setxkbmap.*$/setxkbmap\ '$locale_xinit'\ \&/g' /home/$newuser/.xinitrc
+		sed -i 's/#setxkbmap.*$/setxkbmap\ '$xkeymap'\ \&/g' /home/$newuser/.xinitrc
+		sed -i 's/setxkbmap.*$/setxkbmap\ '$xkeymap'\ \&/g' /home/$newuser/.xinitrc
 	fi
 	echo_display " You need to define $newuser password"
 	pass_user
