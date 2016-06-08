@@ -975,7 +975,7 @@ while [[ "$step" !=  11 ]]; do
 	echo_info_menu "                   Expert mode"
 	echo_info_menu "**************************************************************"
 	echo_bold ""
-	echo_bold " 8  -  Edit rc.conf file"
+	echo_bold " 8  -  Edit the booting configuration file"
 	echo_bold " 9  -  Browse with Midnight Commander"
 	echo_bold " 10 -  Delete custo_once files"
 	echo_bold ""
@@ -1029,7 +1029,11 @@ define_hostname(){
 	fi
 	echo_display " Enter your hostname"
 	read hostname
-	sed -i "s/HOSTNAME=\".*$/HOSTNAME=\"$hostname\"/g" /etc/rc.conf
+	if [[ -h /etc/s6.conf ]]; then
+		sed -i "s/HOSTNAME=.*$/HOSTNAME=$hostname/g" /etc/s6/s6.conf
+	else
+		sed -i "s/HOSTNAME=\".*$/HOSTNAME=\"$hostname\"/g" /etc/rc.conf
+	fi
 	echo "$hostname" > /etc/hostname
 	sed -i '/127.0.0.1/s/$/ '$hostname'/' /etc/hosts
 	sed -i '/::1/s/$/ '$hostname'/' /etc/hosts
@@ -1039,7 +1043,12 @@ define_hostname(){
 ##		Edit rc.conf
 
 edit_rc_conf(){
-	"$editor" /etc/rc.conf
+	if [[ -h /etc/s6.conf ]]; then
+		"$editor" /etc/s6/s6.conf
+	else
+		"$editor" /etc/rc.conf
+	fi
+	
 }
 
 ##		Define locale
@@ -1097,10 +1106,18 @@ call_localtime(){
 	define_localtime
 	if [[ "$subzone" != "" ]]; then
 		ln -sf /usr/share/zoneinfo/$zone/$subzone /etc/localtime
-		sed -i "s/TIMEZONE=\".*$/TIMEZONE=\"$zone\/$subzone\"/g" /etc/rc.conf
+		if [[ -h /etc/s6.conf ]]; then
+			sed -i "s/TZ=.*$/TZ=$zone\/$subzone/g" /etc/s6/s6.conf
+		else
+			sed -i "s/TIMEZONE=\".*$/TIMEZONE=\"$zone\/$subzone\"/g" /etc/rc.conf
+		fi		
 	else
 		ln -sf /usr/share/zoneinfo/$zone /etc/localtime
-		sed -i "s/TIMEZONE=\".*$/TIMEZONE=\"$zone\"/g" /etc/rc.conf
+		if [[ -h /etc/s6.conf ]]; then
+			sed -i "s/TZ=.*$/TZ=$zone/g" /etc/s6/s6.conf
+		else
+			sed -i "s/TIMEZONE=\".*$/TIMEZONE=\"$zone\"/g" /etc/rc.conf
+		fi
 	fi
 	echo_valid " Your localtime is now : $zone/$subzone"
 }
@@ -1125,8 +1142,13 @@ define_keymap(){
 		esac
 	done
 	unset key_list
-	echo_valid " Set KEYMAP in rc.conf"
-	sed -i "s,KEYMAP=\".*$,KEYMAP=\"$keymap\",g" /etc/rc.conf
+	echo_valid " Set KEYMAP in the booting configuration file"
+	if [[ -h /etc/s6.conf ]]; then
+		sed -i "s,KEYMAP=.*$,KEYMAP=$keymap,g" /etc/s6/s6.conf
+	else
+		sed -i "s,KEYMAP=\".*$,KEYMAP=\"$keymap\",g" /etc/rc.conf
+	fi
+	
 }
 
 ##		Define xkeymap
