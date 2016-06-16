@@ -364,6 +364,10 @@ check_editor(){
 choose_dir(){
 	dir_list=$(ls -U `pwd`/config/)
 	echo_display " Select the directory you want to use :"
+	echo_info " Do not select the openboxs6 entry,"
+	echo_info " due of an important change on s6-boot,"
+	echo_info " the script do not install correctly this version"
+	echo_info " It will be available the 2016/06/24-25."
 	select directory in $dir_list; do
 		if check_elements "$directory" $dir_list; then
 			config_dir="$directory"	 
