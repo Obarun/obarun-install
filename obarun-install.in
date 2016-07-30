@@ -51,7 +51,8 @@ main_update(){
 	fi
 }
 
-main_update
+# preparing some important change. So test is needed before make it available for other
+#main_update
 
 main_menu
 
