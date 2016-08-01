@@ -6,12 +6,12 @@ pkgver=23536df
 pkgrel=1
 pkgdesc=" Script for automatic installation"
 arch=(x86_64)
-url="file:///var/lib/obarun/$pkgname/update_package/$pkgname"
+url="file:///opt/$pkgname/.build/$pkgname"
 license=('BEERWARE')
 depends=('arch-install-scripts' 'mc' 'yaourt' 'git' 'pacman' 'sudo' 'obarun-libs')
 backup=('etc/obarun/install.conf')
 install=
-source=("$pkgname::git+file:///var/lib/obarun/$pkgname/update_package/$pkgname")
+source=("$pkgname::git+file:///opt/$pkgname/.build/$pkgname")
 md5sums=('SKIP')
 validpgpkeys=('6DD4217456569BA711566AC7F06E8FDE7B45DAAC') # Eric Vidal
 
