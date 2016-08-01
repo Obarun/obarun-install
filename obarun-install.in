@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 # This script is under license BEER-WARE
 # "THE BEER-WARE LICENSE" (Revision 42):
 # <eric@obarun.org> wrote this file.  As long as you retain this notice you
@@ -15,16 +15,23 @@ shopt -s extglob
 
 ##		Check is the functions file exits
 
-if [[ -f `pwd`/functions ]]; then
-  source `pwd`/functions
+if [[ -f /usr/lib/obarun/common_functions ]]; then
+	source /usr/lib/obarun/common_functions
 else
-  echo "==>> Missing file : functions"
-  exit	
+	echo "==>> Missing file : common_functions"
+	exit	
+fi
+
+if [[ -f /usr/lib/obarun/install_functions ]]; then
+	source /usr/lib/obarun/install_functions
+else
+	echo "==>> Missing file : install_functions"
+	exit	
 fi
 
 ##		Clean before exit
 
-trap "clean_install" EXIT ERR QUIT KILL STOP INT TERM HUP
+trap "clean_install" EXIT ERR QUIT KILL STOP INT TERM 
 
 ##		Must be root user 
 
@@ -41,8 +48,8 @@ main_update(){
 
 	if (( ! "$rc" )); then
 		unset rc
-		pac_update  || die " Impossible to update"
-		source `pwd`/functions
+		pac_update "obarun-install" "/var/lib/obarun/obarun-install" "$git_addr" || die " Impossible to update"
+		source /usr/lib/obarun/install_functions
 	else
 		unset rc
 		echo_retry " Some functionalities will cannot working properly without updating"
@@ -51,8 +58,9 @@ main_update(){
 	fi
 }
 
-# preparing some important change. So test is needed before make it available for other
-#main_update
+if [[ "$update" == "yes" ]]; then
+	main_update
+fi
 
 main_menu
 
