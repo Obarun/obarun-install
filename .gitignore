@@ -1,9 +1,8 @@
 call_test
 check_functions
-PKGBUILD
 src/
 pkg/
 *.tar.*
 obarun-install/
 .gitignore
-.directory
+

@@ -1,9 +1,6 @@
-This is a very simple script for make an automatic installation. This script have preconfigured directory to provide obarun with openbox, xfce4, plasma as desktop, but you can use it for install your own configuration.
+This is a very simple script for make an automatic installation. This script have preconfigured directory to provide obarun with openbox booting Runit or S6, xfce4, plasma as desktop, but you can use it for install your own configuration.
 Starting from obarun-iso or official Arch-iso or with a minimal Arch architecture is possible.
-You can create an ISO with your own system easily.
 Own repository and AUR repo is supported.
-
-
 
 Assumptions:
 ============
