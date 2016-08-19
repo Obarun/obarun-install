@@ -28,6 +28,7 @@ rc=""
 
 clean_install(){
 	
+	echo_display " Cleaning up"
 	# make sure that all process are killed
 	# before umounting 
 	pkill haveged
@@ -39,7 +40,7 @@ clean_install(){
 	fi
 	if [[ $(awk -F':' '{ print $1}' /etc/passwd | grep usertmp) >/dev/null ]]; then
 		echo_valid " Removing user usertmp"
-		rem_usertmp &>/dev/null
+		user_del "usertmp" &>/dev/null
 	fi
 	if [[ -e /etc/yaourtrc.ori.obarun ]]; then
 		mv /etc/yaourtrc.ori.obarun /etc/yaourtrc
@@ -147,7 +148,7 @@ edit_pacman(){
 
 edit_customize_chroot(){
 	check_editor
-	edit_file "customizeChroot" "$gen_dir/$config_dir" "$editor" || die " File customizeChroot not exist, you need to choose number 7 first"
+	edit_file "customizeChroot" "$gen_dir/$config_dir" "$editor" || die " File customizeChroot not exist, you need to choose number 7 first" "clean_install"
 	if [[ -d "$newroot/etc" ]]; then
 		echo_display " Copying customizeChroot to $newroot/etc/customizeChroot"
 		cp -f "$gen_dir/$config_dir/customizeChroot" "$newroot/etc/customizeChroot" 
@@ -185,13 +186,13 @@ check_pac_needed(){
 	echo_display " Check packages needed for the script"
 	if [[ ! $(pacman -Qs arch-install-scripts) >/dev/null ]]; then
 		echo_notvalid " Installing arch-install-scripts"
-		pacman -S arch-install-scripts --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to install the package arch-install-scripts"
+		pacman -S arch-install-scripts --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to install the package arch-install-scripts" "clean_install"
 	else
 		echo_valid " arch-install-scripts : already installed"
 	fi
 	if [[ ! $(pacman -Qs yaourt) >/dev/null ]]; then
 		echo_notvalid " Installing yaourt"
-		pacman -S base-devel package-query yaourt --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to install the package arch-install-scripts"
+		pacman -S base-devel package-query yaourt --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to install the package arch-install-scripts" "clean_install"
 	else
 		echo_valid " yaourt : already installed"
 	fi
@@ -224,25 +225,25 @@ select_list(){
 copy_file(){
 	echo_display " Check needed files in ${newroot}"
 	if [[  ! -e "$newroot/etc/resolv.conf" ]]; then 
-		cp /etc/resolv.conf "$newroot/etc/resolv.conf" || die " Impossible to copy the file resolv.conf"
+		cp /etc/resolv.conf "$newroot/etc/resolv.conf" || die " Impossible to copy the file resolv.conf" "clean_install"
 	else
 		echo_valid " File resolv.conf already exist"
 	fi
 	if [[ ! -d "$newroot/$src_functions" ]]; then
-		mkdir -p "$newroot/$src_functions" || die " Impossible to create /tmp/obarun-install-tmp directory"
+		mkdir -p "$newroot/$src_functions" || die " Impossible to create /tmp/obarun-install-tmp directory" "clean_install"
 	fi
 	
 	echo_notvalid " Copying install_functions"	
-	cp -f "/usr/lib/obarun/install_functions" "$newroot/$src_functions/install_functions" || die "Impossible to copy file install_functions"
+	cp -f "/usr/lib/obarun/install_functions" "$newroot/$src_functions/install_functions" || die "Impossible to copy file install_functions" "clean_install"
 	
 	echo_notvalid " Copying common_functions"
-	cp -f "/usr/lib/obarun/common_functions" "$newroot/$src_functions/common_functions" || die "Impossible to copy file common_functions"
+	cp -f "/usr/lib/obarun/common_functions" "$newroot/$src_functions/common_functions" || die "Impossible to copy file common_functions" "clean_install"
 	
 	echo_notvalid " Copying install.conf"
-	cp -f "/etc/obarun/install.conf" "$newroot/$src_functions/install.conf" || die " Impossible to copy file install.conf"
+	cp -f "/etc/obarun/install.conf" "$newroot/$src_functions/install.conf" || die " Impossible to copy file install.conf" "clean_install"
 	
 	echo_notvalid " Copying customizeChroot"
-	cp -f "$gen_dir/$config_dir/customizeChroot" "$newroot/$src_functions/customizeChroot" || die " Impossible to copy file customizeChroot"
+	cp -f "$gen_dir/$config_dir/customizeChroot" "$newroot/$src_functions/customizeChroot" || die " Impossible to copy file customizeChroot" "clean_install"
 	
 }
 
@@ -252,8 +253,8 @@ install_pack(){
 	
 	if [[ "$pack" == 0 ]]; then
 		echo_display " Install packages from lists"
-		pac_install || die " Impossible to install packages from repository" 
-		aur_install || die " Impossible to install packages from AUR"
+		pac_install || die " Impossible to install packages from repository" "clean_install"
+		aur_install || die " Impossible to install packages from AUR" "clean_install"
 	else
 		resume_install
 		aur_install
@@ -283,7 +284,7 @@ resume_install(){
 	#install base package	
 	if [[ -n "${result_base[@]}" ]]; then
 		echo_notvalid " Install missing base packages"
-		pacman -r "$newroot" -S "${result_base[@]}" --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm 2>/dev/null || die " Failed to install packages"
+		pacman -r "$newroot" -S "${result_base[@]}" --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm 2>/dev/null || die " Failed to install packages" "clean_install"
 		result_base=()
 	else
 		echo_valid " Nothing to do for base system"
@@ -300,7 +301,7 @@ resume_install(){
 	#install package
 	if [[ -n "${result[@]}" ]]; then
 		echo_notvalid " Install missing packages"
-		pacman -r "$newroot" -S "${result[@]}" --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm 2>/dev/null || die " Failed to install packages"
+		pacman -r "$newroot" -S "${result[@]}" --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm 2>/dev/null || die " Failed to install packages" "clean_install"
 		result=()
 	else
 		echo_valid " Nothing to do for pacman"
@@ -311,8 +312,8 @@ resume_install(){
 
 pac_install(){
 		echo_display " Install base first"
-		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/base) --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm #2>/dev/null || die " Failed to install packages"
-		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*) --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm #2>/dev/null || die " Failed to install packages"
+		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/base) --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm || die " Failed to install packages" "clean_install"
+		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*) --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm || die " Failed to install packages" "clean_install"
 }
 
 ## 		Install package from aur
@@ -374,23 +375,23 @@ aur_cache(){
 						# check for last version
 						# TODO : can cause problem if the cache directory is out of date, need to be improved
 						pack=$(ls -1t $cache_dir | grep $wanted | head -1) 
-						pacman -r "$newroot" -U"$sync" "$cache_dir"/$pack --noconfirm || die " Failed to install packages" 
+						pacman -r "$newroot" -U"$sync" "$cache_dir"/$pack --noconfirm || die " Failed to install packages" "clean_install"
 						p_hit=""
 						hit=""
 						passed=0
 				fi
 				if [[ $hit = 0 ]]; then
-					pacman -r "$newroot" -U"$sync" "$yaourt_cache"/$wanted*.xz --noconfirm || die " Failed to install packages" 
+					pacman -r "$newroot" -U"$sync" "$yaourt_cache"/$wanted*.xz --noconfirm || die " Failed to install packages" "clean_install"
 					hit=""
 				else
 					if [[ $passed != 0 ]]; then
-						sudo -u usertmp yaourt -r "$newroot" -S"$sync" "$wanted" --noconfirm || die " Failed to install packages" 
+						sudo -u usertmp yaourt -r "$newroot" -S"$sync" "$wanted" --noconfirm || die " Failed to install packages" "clean_install"
 						hit=""
 						passed=""
 					fi
 				fi
 			else
-				sudo -u usertmp yaourt -r "$newroot" -S"$sync" "$wanted" --noconfirm || die " Failed to install packages"
+				sudo -u usertmp yaourt -r "$newroot" -S"$sync" "$wanted" --noconfirm || die " Failed to install packages" "clean_install"
 			fi
 		done <<< ${result[@]}
 	else
@@ -403,11 +404,11 @@ aur_cache(){
 sync_data(){
 	
 	echo_display " Synchronize database"
-	pacman -Sy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database"
+	pacman -Sy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database" "clean_install"
 	
 	echo_display " Copying database on $newroot/var/lib/pacman/sync/"	
 	mkdir -p -m0755 "$newroot/var/lib/pacman/sync/"
-	cp /var/lib/pacman/sync/*.db "$newroot/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.db doesn't exit on host"
+	cp /var/lib/pacman/sync/*.db "$newroot/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.db doesn't exit on host" "clean_install"
 		
 }
 
@@ -415,7 +416,7 @@ sync_data(){
 
 copy_rootfs(){
 	echo_display " Copying configuration files in ${newroot}"
-	cp -af "$dir"/config/"$config_dir"/rootfs/* "$newroot"/ || die " Impossible to copy files"
+	cp -af "$dir"/config/"$config_dir"/rootfs/* "$newroot"/ || die " Impossible to copy files" "clean_install"
 }
 
 ##		Customize newroot
@@ -433,13 +434,13 @@ enter_chroot(){
 	
 	create_dir
 	mount_umount "$newroot" "mount"
-	user_tmp
-	copy_file
+	user_add "usertmp" || die " Impossible to create user usertmp" "clean_install"
 	copy_rootfs
+	copy_file
 	define_root
 	
 	echo_display " Enter on chroot of ${newroot}"	
-	chroot "$newroot" "$src_functions"/customizeChroot || die " Failed to enter on ${newroot} or Failed to execute functions customizeChroot"
+	chroot "$newroot" "$src_functions"/customizeChroot || die " Failed to enter on ${newroot} or Failed to execute functions customizeChroot" "clean_install"
 	
 	cp -f "$newroot"/"$src_functions"/install.conf /etc/obarun/install.conf
 }
@@ -528,7 +529,7 @@ install_system(){
 	
 	create_dir
 	mount_umount "$newroot" "mount"
-	user_tmp
+	user_add "usertmp" || die " Impossible to create user usertmp" "clean_install"
 	copy_file
 	check_gpg "$gpg_dir"
 	sync_data
@@ -610,7 +611,7 @@ while [[ "$step" !=  13 ]]; do
 			11) call_shell;;
 			12)	mc_newroot;;
 			13) echo_display " Exiting"
-				exit;;
+				clean_install;;
 			*) echo_retry " Invalid number, Please retry: "
 		esac
 		echo_info " Press enter to return to the Main menu"
@@ -637,7 +638,7 @@ while [[ "$step" !=  11 ]]; do
 	echo_bold " 1  -  Define hostname ${green}[$hostname]"
 	echo_bold " 2  -  Define locale ${green}[$locale]"
 	echo_bold " 3  -  Define localtime ${green}[$zone/$subzone]"
-	echo_bold " 4  -  Create a new user ${green}[$newuser]"
+	echo_bold " 4  -  Define a new user ${green}[$newuser]"
 	echo_bold " 5  -  Define console keymap ${green}[$keymap]"
 	echo_bold " 6  -  Define desktop keymap ${green}[$xkeymap]"
 	echo_bold ""
@@ -947,7 +948,7 @@ clean_once_file(){
 	local action dir f_
 	action="${1}"
 	dir="${2}"
-	if [[ -d /root/tmp/obarun-install ]]; then
+	if [[ -d "${src_functions}" ]]; then
 		file_list=$(ls $dir/ | uniq) 
 		file_list+=" Remove_all_files"
 		file_list+=" Exit"

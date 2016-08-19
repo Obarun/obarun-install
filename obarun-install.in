@@ -31,11 +31,11 @@ fi
 
 ##		Clean before exit
 
-trap "clean_install" EXIT ERR QUIT KILL STOP INT TERM 
+trap "clean_install" ERR QUIT KILL STOP INT TERM 
 
 ##		Must be root user 
 
-(( EUID == 0 )) || die " ${bred}You must be run this script with root privileges"
+(( EUID == 0 )) || die " ${bred}You must be run this script with root privileges" "clean_install"
 
 ##		Let's go
 
@@ -48,7 +48,7 @@ main_update(){
 
 	if (( ! "$rc" )); then
 		unset rc
-		pac_update "obarun-install" "/var/lib/obarun/obarun-install" "$git_addr" || die " Impossible to update"
+		pac_update "obarun-install" "/var/lib/obarun/obarun-install" "$git_addr" || die " Impossible to update" "clean_install"
 		source /usr/lib/obarun/install_functions
 	else
 		unset rc
