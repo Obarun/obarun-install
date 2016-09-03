@@ -46,12 +46,10 @@ main_update(){
 
 	reply_answer
 
-	if (( ! "$rc" )); then
-		unset rc
+	if (( ! $? )); then
 		pac_update "obarun-install" "/var/lib/obarun/obarun-install" "$git_addr" || die " Impossible to update" "clean_install"
 		source /usr/lib/obarun/install_functions
 	else
-		unset rc
 		echo_retry " Some functionalities will cannot working properly without updating"
 		echo_info " Press enter to continue"
 		read enter

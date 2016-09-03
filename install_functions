@@ -22,7 +22,7 @@ tmp_yaourt="$newroot/tmp/"
 src_functions="/tmp/obarun-install-tmp"
 
 pack=0
-rc=""
+
 
 ## 		Clean on exit
 
@@ -385,13 +385,13 @@ aur_cache(){
 					hit=""
 				else
 					if [[ $passed != 0 ]]; then
-						sudo -u usertmp yaourt -r "$newroot" -S"$sync" "$wanted" --noconfirm || die " Failed to install packages" "clean_install"
+						su usertmp -c "yaourt -r $newroot -S$sync $wanted --noconfirm" || die " Failed to install packages" "clean_install"
 						hit=""
 						passed=""
 					fi
 				fi
 			else
-				sudo -u usertmp yaourt -r "$newroot" -S"$sync" "$wanted" --noconfirm || die " Failed to install packages" "clean_install"
+				su usertmp -c "yaourt -r $newroot -S$sync $wanted --noconfirm" || die " Failed to install packages" "clean_install"
 			fi
 		done <<< ${result[@]}
 	else
@@ -424,14 +424,12 @@ copy_rootfs(){
 enter_chroot(){
 	# make sure the necessary is present before enter on chroot
 	check_mountpoint "$newroot"
-	if (( "$rc" )); then
-		unset rc
+	if (( $? )); then
 		echo_retry " This is not a valid mountpoint"
 		echo_retry " You need to mount a device on $newroot or choose another directory"
 		(sleep 4) && echo_info " Returning to the main_menu" && (sleep 1) && main_menu
 	fi
-	unset rc
-	
+		
 	create_dir
 	mount_umount "$newroot" "mount"
 	user_add "usertmp" || die " Impossible to create user usertmp" "clean_install"
@@ -449,13 +447,12 @@ enter_chroot(){
 
 mc_newroot(){
 	check_mountpoint "$newroot"
-	if (( "$rc" )); then
-		unset rc
+	if (( $? )); then
 		echo_retry " This is not a valid mountpoint"
 		echo_retry " You need to mount a device on $newroot or choose another directory"
 		(sleep 4) && echo_info " Returning to the main_menu" && (sleep 1) && main_menu
 	fi
-	unset rc
+	
 	
 	create_dir
 	mount_umount "$newroot" "mount"
@@ -466,14 +463,12 @@ mc_newroot(){
 
 call_shell(){
 	check_mountpoint "$newroot"
-	if (( "$rc" )); then
-		unset rc
+	if (( $? )); then
 		echo_retry " This is not a valid mountpoint"
 		echo_retry " You need to mount a device on $newroot or choose another directory"
 		(sleep 4) && echo_info " Returning to the main_menu" && (sleep 1) && main_menu
 	fi
-	unset rc
-	
+		
 	create_dir
 	mount_umount "$newroot" "mount"
 	echo_info " Tape exit when you have finished"
@@ -519,13 +514,12 @@ pass_root(){
 
 install_system(){
 	check_mountpoint "$newroot"
-	if (( "$rc" )); then
-		unset rc
+	if (( $? )); then
 		echo_retry " This is not a valid mountpoint"
 		echo_retry " You need to mount a device on $newroot or choose another directory"
 		(sleep 4) && echo_info " Returning to the main_menu" && (sleep 1) && main_menu
 	fi
-	unset rc
+	
 	
 	create_dir
 	mount_umount "$newroot" "mount"
@@ -996,8 +990,7 @@ syslinux_install(){
 syslinux_edit(){
 	echo_display " Do you want edit syslinux.cfg [y|n]"
 	reply_answer
-	if (( ! "$rc" )); then
-		unset rc
+	if (( ! $? )); then
 		check_editor
 		"$editor" "/boot/syslinux/syslinux.cfg"
 	fi
