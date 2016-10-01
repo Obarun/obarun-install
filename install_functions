@@ -88,6 +88,7 @@ choose_editor(){
 			*)if check_elements "$editor" "${editors_list[@]}"; then
 					echo_valid " Your editor is now : $editor"
 					sed -i "s,editor=.*$,editor=\"$editor\",g" /etc/obarun/install.conf
+					source /etc/obarun/install.conf
 					break
 			  else 
 					echo_retry " Invalid number, retry :"
@@ -117,6 +118,7 @@ choose_config(){
 	done
 	echo_valid " You chose $config_dir"
 	sed -i "s,config_dir=.*$,config_dir=\"$config_dir\",g" /etc/obarun/install.conf
+	source /etc/obarun/install.conf
 }
 
 ##		Choose cache directory for pacman
@@ -135,6 +137,7 @@ choose_cache(){
 	#done
 	echo_valid " Your cache directory is now : $cache_dir"
 	sed -i "s,cache_dir=.*$,cache_dir=\"$cache_dir\",g" /etc/obarun/install.conf
+	source /etc/obarun/install.conf
 }
 
 ## 		Edit pacman.conf
@@ -176,6 +179,7 @@ choose_rootdir(){
 	echo_valid " Your root directory for installation is now : $_directory"
 	newroot="${_directory}"
 	sed -i "s,newroot=.*$,newroot=\"$newroot\",g" /etc/obarun/install.conf
+	source /etc/obarun/install.conf
 	
 	unset _directory
 }
@@ -680,6 +684,7 @@ define_hostname(){
 	echo_valid " hostname is now : $hostname"
 	
 	sed -i "s,hostname=.*$,hostname=\"$hostname\",g" "$src_functions"/install.conf
+	
 }
 
 ##		Define locale
@@ -697,6 +702,7 @@ define_locale(){
 	echo_valid " your locale is now : $locale"
 	
 	sed -i "s,locale=.*$,locale=\"$locale\",g" "$src_functions"/install.conf
+	
 }
 
 ##		Define localtime
@@ -742,6 +748,7 @@ call_localtime(){
 	
 	sed -i "s,zone=.*$,zone=\"$zone\",g" "$src_functions"/install.conf
 	sed -i "s,subzone=.*$,subzone=\"$subzone\",g" "$src_functions"/install.conf
+	
 }
 
 ##		Define keymap
@@ -766,6 +773,7 @@ define_keymap(){
 	unset key_list	
 	
 	sed -i "s,^keymap=.*$,keymap=\"$keymap\"," "$src_functions"/install.conf
+	
 }
 
 ##		Define xkeymap
@@ -790,6 +798,7 @@ define_xkeymap(){
 	unset key_list
 		
 	sed -i "s,^xkeymap=.*$,xkeymap=\"$xkeymap\"," "$src_functions"/install.conf
+	
 }
 
 ##		Define a new user
