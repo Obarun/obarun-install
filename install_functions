@@ -31,9 +31,7 @@ clean_install(){
 	echo_display " Cleaning up"
 	# make sure that all process are killed
 	# before umounting 
-	pkill haveged
-	pkill gpg-agent
-	pkill dirmngr
+	kill_process "haveged gpg-agent dirmngr"
 	
 	mount_umount "$newroot" "umount"
 	
