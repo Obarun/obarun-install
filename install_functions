@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/bash
 ## This script is under license BEER-WARE.
 # "THE BEER-WARE LICENSE" (Revision 42):
 # <eric@obarun.org> wrote this file.  As long as you retain this notice you
@@ -7,21 +7,28 @@
 
 # functions file for obarun-install package
 
-shopt -s extglob
-
-source /usr/lib/obarun/common_functions
-source /etc/obarun/install.conf
+sourcing(){
+	
+	local list
+	
+	for list in /usr/lib/obarun/common_functions /etc/obarun/install.conf; do
+		if [[ -f "${list}" ]]; then
+			source "${list}"
+		else
+			echo_error " Missing file : ${list}"
+			exit	
+		fi
+	done
+	
+	unset list
+}
+#sourcing
 
 ## 		Some global variables needed
 
-home_path="/var/lib/obarun/obarun-install"
-dir="$home_path"
-gen_dir="$dir/config"
-yaourt_cache="$newroot/var/cache/pacman/pkg" 
-tmp_yaourt="$newroot/tmp/"
-src_functions="/tmp/obarun-install-tmp"
-
-pack=0
+HOME_PATH="/var/lib/obarun/obarun-install"
+GENERAL_DIR="$HOME_PATH/config"
+SOURCES_FUNC="/tmp/obarun-install-tmp"
 
 
 ## 		Clean on exit
@@ -30,128 +37,127 @@ clean_install(){
 	
 	echo_display " Cleaning up"
 	# make sure that all process are killed
-	# before umounting 
+	# before umounting
+	echo_valid " Killing process" 
 	kill_process "haveged gpg-agent dirmngr"
 	
-	mount_umount "$newroot" "umount"
+	echo_valid " Umount $NEWROOT"
+	mount_umount "$NEWROOT" "umount"
 	
 	if [[ $(awk -F':' '{ print $1}' /etc/passwd | grep usertmp) >/dev/null ]]; then
 		echo_valid " Removing user usertmp"
 		user_del "usertmp" &>/dev/null
 	fi
-	if [[ -e /etc/yaourtrc.ori.obarun ]]; then
-		mv /etc/yaourtrc.ori.obarun /etc/yaourtrc
-	fi
-	
+		
 	# keep the configuration variable from install.conf
-	if [[ -f "$newroot"/"$src_functions"/install.conf ]]; then
-		cp -f "$newroot"/"$src_functions"/install.conf /etc/obarun/install.conf
+	if [[ -f "$NEWROOT"/"$SOURCES_FUNC"/install.conf ]]; then
+		echo_valid " Keeping the configuration from $NEWROOT/$SOURCES_FUNC/install.conf"
+		cp -f "$NEWROOT"/"$SOURCES_FUNC"/install.conf /etc/obarun/install.conf
 	fi
 	
-	if [[ -d "$newroot"/"$src_functions" ]]; then
-		rm -r "$newroot"/"$src_functions"
+	if [[ -d "$NEWROOT"/"$SOURCES_FUNC" ]]; then
+		echo_valid " Remove directory $SOURCES_FUNC"
+		rm -r "$NEWROOT"/"$SOURCES_FUNC"
 	fi
+	
+	echo_valid " Restore your shell options"
+	shellopts_restore
 	
 	exit
 }
 
-## 		Create needed directory
-
-create_dir(){
-	echo_display " Check for needed directory"
-	if ! [ -d "$newroot/proc" ]; then 
-		echo_notvalid " Create needed directory in ${newroot}"
-		mkdir -m 0755 -p "$newroot"/var/{cache/pacman/pkg,lib/pacman,log} "$newroot"/{dev,run,etc}
-		mkdir -m 0755 -p "$newroot"/dev/{pts,shm}
-		mkdir -m 1777 -p "$newroot"/tmp
-		mkdir -m 0555 -p "$newroot"/{sys,proc}
-	else
-		echo_valid " Directory needed already exists"
-	fi
-}
-
-
 ## 		Select, check editor
 
 choose_editor(){
-	local old_editor
-	old_editor="$editor"
+	
+	local old_editor _editor
+	local -a editor_list
+	
+	old_editor="$EDITOR"
+	
 	editors_list=("nano" "vi" "mcedit" "Exit");
 	echo_display " Select your editor :"
-	select editor in "${editors_list[@]}"; do
-		case "$editor" in
-			Exit)editor="$old_editor"
+	select _editor in "${editors_list[@]}"; do
+		case "$_editor" in
+			Exit)EDITOR="$old_editor"
 				break;;
-			*)if check_elements "$editor" "${editors_list[@]}"; then
-					echo_valid " Your editor is now : $editor"
-					sed -i "s,editor=.*$,editor=\"$editor\",g" /etc/obarun/install.conf
-					source /etc/obarun/install.conf
+			*)if check_elements "$_editor" "${editors_list[@]}"; then
+					echo_valid " Your editor is now : $_editor"
+					sed -i "s,EDITOR=.*$,EDITOR=\"$_editor\",g" /etc/obarun/install.conf
+					#source /etc/obarun/install.conf
 					break
 			  else 
 					echo_retry " Invalid number, retry :"
 			  fi
 		esac
 	done
+	
+	unset old_editor _editor editor_list
 }
 
 check_editor(){
-	if [[ "$editor" == "" ]]; then
-		editor="mcedit"
+	if [[ -z "$EDITOR" ]]; then
+		EDITOR="mcedit"
 	fi
 }
 
 ## 		Select config directory
 
 choose_config(){
-	dir_list=$(ls -U $dir/config/)
+	
+	local _directory
+	
+	dir_list=$(ls -U $GENERAL_DIR)
 	echo_display " Select the configuration directory that you want to use :"
-	select directory in $dir_list; do
-		if check_elements "$directory" $dir_list; then
-			config_dir="$directory"	 
-		break
+	select _directory in ${dir_list[@]}; do
+		if check_elements "$_directory" ${dir_list[@]}; then
+			CONFIG_DIR="$_directory"	 
+			break
 		else 
 			echo_retry " Invalid number, retry :"
 		fi
 	done
-	echo_valid " You chose $config_dir"
-	sed -i "s,config_dir=.*$,config_dir=\"$config_dir\",g" /etc/obarun/install.conf
-	source /etc/obarun/install.conf
+	echo_valid " You chose $_directory"
+	sed -i "s,CONFIG_DIR=.*$,CONFIG_DIR=\"$_directory\",g" /etc/obarun/install.conf
+	#source /etc/obarun/install.conf
+
+	unset _directory
 }
 
 ##		Choose cache directory for pacman
 
 choose_cache(){
+	
+	local _cache_dir
 	echo_display " Enter the path for your own cache directory"
-	read -e cache_dir
-	while [[ ! -d "$cache_dir" ]]; do
-		echo_retry " $cache_dir is not a directory, please retry:"
-		read -e cache_dir
+	read -e _cache_dir
+	while [[ ! -d "$_cache_dir" ]]; do
+		echo_retry " $_cache_dir is not a directory, please retry:"
+		read -e _cache_dir
 	done
-	# the directory must be not empty, may be bug here
-	#while [[ $(ls $cache_dir | grep "pkg.tar.xz") = "" ]]; do
-	#	echo_retry " Is not a valid directory for pacman, please retry:"
-	#	read -e cache_dir
-	#done
-	echo_valid " Your cache directory is now : $cache_dir"
-	sed -i "s,cache_dir=.*$,cache_dir=\"$cache_dir\",g" /etc/obarun/install.conf
-	source /etc/obarun/install.conf
+	
+	echo_valid " Your cache directory is now : $_cache_dir"
+	sed -i "s,CACHE_DIR=.*$,CACHE_DIR=\"$_cache_dir\",g" /etc/obarun/install.conf
+	#source /etc/obarun/install.conf
+	
+	unset _cache_dir
 }
 
 ## 		Edit pacman.conf
 
 edit_pacman(){
 	check_editor
-	edit_file "pacman.conf" "$gen_dir/$config_dir" "$editor"	
+	edit_file "pacman.conf" "$GENERAL_DIR/$CONFIG_DIR" "$EDITOR"	
 }
 
 ## 		Edit customizeChroot file
 
 edit_customize_chroot(){
 	check_editor
-	edit_file "customizeChroot" "$gen_dir/$config_dir" "$editor" || die " File customizeChroot not exist, you need to choose number 7 first" "clean_install"
-	if [[ -d "$newroot/etc" ]]; then
-		echo_display " Copying customizeChroot to $newroot/etc/customizeChroot"
-		cp -f "$gen_dir/$config_dir/customizeChroot" "$newroot/etc/customizeChroot" 
+	edit_file "customizeChroot" "$GENERAL_DIR/$CONFIG_DIR" "$EDITOR" || die " File customizeChroot not exist, you need to choose number 7 first" "clean_install"
+	if [[ -d "$NEWROOT/etc" ]]; then
+		echo_display " Copying customizeChroot to $NEWROOT/etc/customizeChroot"
+		cp -f "$GENERAL_DIR/$CONFIG_DIR/customizeChroot" "$NEWROOT/etc/customizeChroot" 
 	fi
 }
 	
@@ -174,230 +180,351 @@ choose_rootdir(){
 	done
 
 	echo_valid " Your root directory for installation is now : $_directory"
-	newroot="${_directory}"
-	sed -i "s,newroot=.*$,newroot=\"$newroot\",g" /etc/obarun/install.conf
-	source /etc/obarun/install.conf
+	NEWROOT="${_directory}"
+	sed -i "s,NEWROOT=.*$,NEWROOT=\"$_directory\",g" /etc/obarun/install.conf
+	#source /etc/obarun/install.conf
 	
 	unset _directory
-}
-
-## Check if needed packages is installed
-
-check_pac_needed(){
-	echo_display " Check packages needed for the script"
-	if [[ ! $(pacman -Qs arch-install-scripts) >/dev/null ]]; then
-		echo_notvalid " Installing arch-install-scripts"
-		pacman -S arch-install-scripts --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to install the package arch-install-scripts" "clean_install"
-	else
-		echo_valid " arch-install-scripts : already installed"
-	fi
-	if [[ ! $(pacman -Qs yaourt) >/dev/null ]]; then
-		echo_notvalid " Installing yaourt"
-		pacman -S base-devel package-query yaourt --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to install the package arch-install-scripts" "clean_install"
-	else
-		echo_valid " yaourt : already installed"
-	fi
 }
 
 ##		Select packages list
 
 select_list(){
 	local list
+	local -a pac_list
 	check_editor
-	pac_list=$(ls "$gen_dir"/"$config_dir"/package_list/)
+	pac_list=$(ls "$GENERAL_DIR"/"$CONFIG_DIR"/package_list/)
 	pac_list+=" Exit"
-	echo_display " File named repo_* concerns the packages provides by repositories defined in pacman.conf"
-	echo_display " File named aur_* concerns the packages from AUR"
 	echo_display " Select the list you want to edit then select Exit number to return at main menu :"
-	select list in $pac_list; do
+	select list in ${pac_list[@]}; do
 		case "$list" in
 			Exit)break;;
-			*)if check_elements "$list" $pac_list; then
-				"$editor" "$gen_dir/$config_dir/package_list/$list"
+			*)if check_elements "$list" ${pac_list[@]}; then
+				"$EDITOR" "$GENERAL_DIR/$CONFIG_DIR/package_list/$list"
 			  else 
 				echo_retry " Invalid number, retry :"
 			  fi
 		esac
 	done
+	
+	unset list pac_list
+}
+
+##		Define root user
+
+define_root(){
+	
+	local pass_exist
+	pass_exist=$(grep "root" $NEWROOT/etc/shadow | awk -F':' '{print $2}')
+	
+	if [[ ! $(grep "root::" $NEWROOT/etc/shadow) ]]; then
+		echo_display " Create root user on $NEWROOT"
+		usermod -R "$NEWROOT" -s /usr/bin/zsh root
+	fi
+	
+	echo_display " Copy skeleton to $NEWROOT/root/"
+	cp -rT "$NEWROOT/etc/skel/" "$NEWROOT/root/"
+		
+	chmod 0750 "$NEWROOT/root"
+	
+	if [[ -z "${pass_exist}" ]]; then
+		echo_display " You need to define root password"
+		pass_root
+		echo_valid " root user was modified successfully"
+	fi
+	
+	if [[ -e "$NEWROOT/root/.zlogin" ]]; then
+		echo_display " Removing auto-login for root"
+		rm "$NEWROOT/root/.zlogin"
+	fi
+	
+	unset pass_exist
+}
+
+pass_root(){
+	
+	passwd -R "$NEWROOT" root
+
+	while [[ $? -ne 0 ]]; do
+		echo_retry " Password do not match, please retry"
+		passwd -R "$NEWROOT" root
+	done
+}
+
+## 		Create needed directory
+
+create_dir(){
+	echo_display " Check for needed directory"
+	if ! [ -d "$NEWROOT/proc" ]; then 
+		echo_notvalid " Create needed directory in ${NEWROOT}"
+		mkdir -m 0755 -p "$NEWROOT"/var/{cache/pacman/pkg,lib/pacman,log} "$NEWROOT"/{dev,run,etc}
+		mkdir -m 0755 -p "$NEWROOT"/dev/{pts,shm}
+		mkdir -m 1777 -p "$NEWROOT"/tmp
+		mkdir -m 0555 -p "$NEWROOT"/{sys,proc}
+	else
+		echo_valid " Directory needed already exists"
+	fi
 }
 
 ##		Copying file needed
 
 copy_file(){
-	echo_display " Check needed files in ${newroot}"
-	if [[  ! -e "$newroot/etc/resolv.conf" ]]; then 
-		cp /etc/resolv.conf "$newroot/etc/resolv.conf" || die " Impossible to copy the file resolv.conf" "clean_install"
+	
+	local tidy_loop
+	
+	echo_display " Check needed files in ${NEWROOT}"
+	if [[  ! -e "$NEWROOT/etc/resolv.conf" ]]; then 
+		cp /etc/resolv.conf "$NEWROOT/etc/resolv.conf" || die " Impossible to copy the file resolv.conf" "clean_install"
 	else
 		echo_valid " File resolv.conf already exist"
 	fi
-	if [[ ! -d "$newroot/$src_functions" ]]; then
-		mkdir -p "$newroot/$src_functions" || die " Impossible to create /tmp/obarun-install-tmp directory" "clean_install"
+	if [[ ! -d "$NEWROOT/$SOURCES_FUNC" ]]; then
+		mkdir -p "$NEWROOT/$SOURCES_FUNC" || die " Impossible to create /tmp/obarun-install-tmp directory" "clean_install"
 	fi
 	
-	echo_notvalid " Copying install_functions"	
-	cp -f "/usr/lib/obarun/install_functions" "$newroot/$src_functions/install_functions" || die "Impossible to copy file install_functions" "clean_install"
-	
-	echo_notvalid " Copying common_functions"
-	cp -f "/usr/lib/obarun/common_functions" "$newroot/$src_functions/common_functions" || die "Impossible to copy file common_functions" "clean_install"
-	
-	echo_notvalid " Copying install.conf"
-	cp -f "/etc/obarun/install.conf" "$newroot/$src_functions/install.conf" || die " Impossible to copy file install.conf" "clean_install"
-	
-	echo_notvalid " Copying customizeChroot"
-	cp -f "$gen_dir/$config_dir/customizeChroot" "$newroot/$src_functions/customizeChroot" || die " Impossible to copy file customizeChroot" "clean_install"
-	
+	for tidy_loop in /usr/lib/obarun/{install_functions,common_functions} /etc/obarun/install.conf $GENERAL_DIR/$CONFIG_DIR/customizeChroot; do
+		echo_notvalid " Copying $tidy_loop"
+		cp -f "$tidy_loop" "$NEWROOT/$SOURCES_FUNC/" || die " Impossible to copy the file $tidy_loop" "clean_install"
+	done
+	unset tidy_loop
 }
 
-##		Install packages if pack = 0 otherwise call resume_install function
-
-install_pack(){
+# function to find which installer to use for a given package
+# return 10 for pacman, 11 for AUR helper
+# ${1} name of package
+choose_installer(){
 	
-	if [[ "$pack" == 0 ]]; then
-		echo_display " Install packages from lists"
-		pac_install || die " Impossible to install packages from repository" "clean_install"
-		aur_install || die " Impossible to install packages from AUR" "clean_install"
-	else
-		resume_install
-		aur_install
+	local b named
+		
+	named="${1}"
+		
+	for b in $(pacman -Ssq ${named[@]}); do
+		if [[ $named =~ $b ]] ; then
+			return 10			
+		fi
+	done
+	unset b
+	
+	for b in $(cower -sq ${named[@]}); do
+		if [[ $named =~ $b ]] ; then
+			return 11			
+		fi
+	done
+	unset b
+	
+	# be sure the named are not a group
+	# if it's the case return value for pacman
+	
+	for b in $(pacman -Sgq ${named[@]}); do
+		if [[ $named =~ $b ]] ; then
+			return 10			
+		fi
+	done
+		
+	unset named b
+}
+
+install_package(){
+	local item item_base tidy_loop rc
+	local -a installed list list_base result result_base pacman_list aur_list
+	
+	if [[ ! -e $GENERAL_DIR/$CONFIG_DIR/package_list/base ]]; then
+		die "The file named base at $GENERAL_DIR/$CONFIG_DIR/package_list/ must exist, please create one." "clean install"
 	fi
-			
-}
-
-##		Only install packages are not present yet
-
-resume_install(){
-	local item item_base
-	local -a installed not_installed base_installed list list_base result result_base
 	
-	# TODO : bug -> n°7 need to be launch one time else /var/lib/pacman doesn't exist
-	mapfile -t installed < <(pacman -r "$newroot" -Qsq)
-	mapfile -t not_installed < <(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*)
-	mapfile -t base_installed < <(grep -h -v ^# $gen_dir/$config_dir/package_list/base)
+	# bash is the first package installed by pacman
+	# if $NEWROOT/usr/bin/bash doesn't exist means that is the first pass 
+	# into the function install_system; so install base package first
+	if ! [[ -x "$NEWROOT/usr/bin/bash" ]]; then
+		pacman -r "$NEWROOT" -S $(grep -h -v ^# $GENERAL_DIR/$CONFIG_DIR/package_list/base) --config "$GENERAL_DIR/$CONFIG_DIR/pacman.conf" --cachedir "$CACHE_DIR" --noconfirm || die " Failed to install base system" "clean_install"
+	fi
+	
+	installed=($(pacman -r "$NEWROOT" -Qsq))
 	
 	# check first for base packages
-	echo_display " Check base installed packages for pacman"
-	list_base=" ${installed[@]} "
-		for item_base in ${base_installed[@]}; do
-			if ! [[ $list_base =~ " $item_base " ]] ; then
-				result_base+=($item_base)
-			fi
-		done
-	#install base package	
+	
+	echo_display " Check base installed packages"
+	
+	list_base=" ${installed[@]} " #include blank
+	while read item_base; do
+		if ! [[ $list_base =~ " $item_base " ]] ; then
+			result_base+=($item_base)			
+		fi
+	done < <(grep -h -v ^# $GENERAL_DIR/$CONFIG_DIR/package_list/base | sed "/^\s*$/d" | sort -du)
+		
 	if [[ -n "${result_base[@]}" ]]; then
 		echo_notvalid " Install missing base packages"
-		pacman -r "$newroot" -S "${result_base[@]}" --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm 2>/dev/null || die " Failed to install packages" "clean_install"
+		pacman -S ${result_base[@]} -r "$NEWROOT" --config "$GENERAL_DIR/$CONFIG_DIR/pacman.conf" --cachedir "$CACHE_DIR" --noconfirm 2>/dev/null || die " Failed to install packages" "clean_install"
 		result_base=()
 	else
 		echo_valid " Nothing to do for base system"
-	fi	
-		
-	echo_display " Ckeck installed packages for pacman"
-	list=" ${installed[@]} "                #include blank    
-		for item in ${not_installed[@]}; do
-			if ! [[ $list =~ " $item " ]] ; then  
-				result+=($item)
-			fi
-		done
+	fi
 	
-	#install package
-	if [[ -n "${result[@]}" ]]; then
-		echo_notvalid " Install missing packages"
-		pacman -r "$newroot" -S "${result[@]}" --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm 2>/dev/null || die " Failed to install packages" "clean_install"
-		result=()
-	else
-		echo_valid " Nothing to do for pacman"
-	fi
-}
-
-## 		Install packages with pacman
-
-pac_install(){
-		echo_display " Install base first"
-		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/base) --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm || die " Failed to install packages" "clean_install"
-		pacman -r "$newroot" -S $(grep -h -v ^# $gen_dir/$config_dir/package_list/repo_*) --config "$gen_dir/$config_dir/pacman.conf" --cachedir "$cache_dir" --noconfirm || die " Failed to install packages" "clean_install"
-}
-
-## 		Install package from aur
-
-aur_install(){
-	chmod -R 0777 "$yaourt_cache" ## this turn around is little ugly but necessary to allow written by user "usertmp"
-	if [[ ! -d "$newroot/var/lib/pacman/sync" ]]; then 
-		sync="y"
-	else
-		sync=""
-	fi
-		
-	if [[ ! -e /etc/yaourtrc.ori.obarun ]]; then
-		if [[ -e /etc/yaourtrc ]]; then
-			cp /etc/yaourtrc /etc/yaourtrc.ori.obarun
+	# check installed packages
+	
+	echo_display " Ckeck installed packages, this may take time..."
+	
+	list=" ${installed[@]} " #include blank  
+	while read item; do
+		if ! [[ $list =~ " $item " ]] ; then
+			result+=("$item")			
 		fi
-		sed -i "s:#TMPDIR=.*$:TMPDIR=$tmp_yaourt:" /etc/yaourtrc
-		sed -i "s:#EXPORT=.*$:EXPORT=1:" /etc/yaourtrc
-		sed -i "s:#EXPORTDIR=.*$:EXPORTDIR=$yaourt_cache:" /etc/yaourtrc
-	fi	
-	aur_cache
-	chmod -R 0755 "$yaourt_cache"
+	done < <(grep -h -v ^# $GENERAL_DIR/$CONFIG_DIR/package_list/* | sed "/^\s*$/d" | sort -du)
+
+	#install missing package if necessary
+	if [[ -n "${result[@]}" ]]; then
+				
+		for tidy_loop in ${result[@]} ; do
+		
+			choose_installer "${tidy_loop}"
+			
+			rc=$?
+				
+			case "$rc" in 
+				10) 
+					unset rc
+					pacman_list+=("$tidy_loop")
+					;;
+				11)
+					unset rc
+					aur_list+=("$tidy_loop")
+					;;
+				*)
+					unset rc
+					echo die "$tidy_loop can not be installed by pacman or AUR helper" "clean install"
+					;;
+			esac
+		done
+		
+		if [[ -n ${pacman_list[@]} ]]; then
+			echo_notvalid " Install missing packages coming from repo define in pacman.conf"
+			pacman -r "$NEWROOT" -S ${pacman_list[@]} --config "$GENERAL_DIR/$CONFIG_DIR/pacman.conf" --cachedir "$CACHE_DIR" --noconfirm || die " Failed to install packages with pacman" "clean_install"
+		fi
+	
+		if [[ -n ${aur_list[@]} ]]; then
+			echo_notvalid " Install missing packages coming from AUR"
+			unset tidy_loop
+			for tidy_loop in ${aur_list[@]}; do
+				aur_install "${tidy_loop}"
+			done			
+		fi
+	else
+		echo_valid " All packages are already installed, nothing to do."
+	fi
+	
+	unset item item_base tidy_loop installed list list_base result result_base pacman_list aur_list
 }
 
-aur_cache(){
-	local list item hit wanted name p_hit passed
-	local -a installed notinstalled y_cached p_cached result
+# ${1} name of the package
+aur_deps(){
 	
-	mapfile -t installed < <(pacman -r "$newroot" -Qsq)
-	mapfile -t notinstalled < <(cat $gen_dir/$config_dir/package_list/aur_* | grep -v "#" | sed  '/^ *$/d')
-	mapfile -t y_cached < <(ls -1 -p $yaourt_cache/ | grep -v '/$' | grep -v "gz" | sed 's/-[0-9].*$//g')
-	mapfile -t p_cached < <(ls $cache_dir | sed 's/-[0-9].*$//g' | uniq)
+	local named tidy_loop rc
+	local -a dps dps_parsed
 	
-	echo_display " Ckeck installed packages for yaourt"
-	# diff between wanted and installed	
-	list=" ${installed[@]} "                  
-	for item in "${notinstalled[@]}"; do
-		if ! [[ $list =~ " $item " ]] ; then  
-			result+=($item,)
+	named="${1}"
+	dps=$(cower -i $named --format=%D) # Depends
+	dps+=($(cower -i $named --format=%M)) # Makedepends
+	
+	# parse each element of the array to remove any <>= characters
+	for tidy_loop in ${dps[@]}; do
+		#echo tidy_loop :: $tidy_loop
+		tidy_loop=${tidy_loop%%@(>|<|=)*}
+		#echo tidy_loop parsed :: $tidy_loop
+		dps_parsed+=("$tidy_loop")
+	done
+	unset tidy_loop
+	
+	# loop through dependencies recursively
+	for tidy_loop in ${dps_parsed[@]}; do
+		
+		choose_installer "${tidy_loop}"
+		
+		rc=$?
+		
+		if [[ "$rc" == 11 ]];then
+			aur_deps "${tidy_loop}"
+			aur_install "${tidy_loop}"
 		fi
 	done
 	
-	# TODO : FAIL try to install a package group instead of package name
-	# install from cache if present else download it
-	if [[ -n "${result[@]}" ]]; then
-		while read -d "," wanted; do
-			if [[ -n "${y_cached[@]}" ]]; then
-				for name in "${y_cached[@]}"; do
-					if [ $name = $wanted ]; then
-						hit=0
-					fi
-				done
-				for name in "${p_cached[@]}";do
-					if [ $name = $wanted ]; then
-						p_hit=0
-					fi
-				done
-				if [[ $p_hit = 0 ]]; then
-						# check for last version
-						# TODO : can cause problem if the cache directory is out of date, need to be improved
-						pack=$(ls -1t $cache_dir | grep $wanted | head -1) 
-						pacman -r "$newroot" -U"$sync" "$cache_dir"/$pack --noconfirm || die " Failed to install packages" "clean_install"
-						p_hit=""
-						hit=""
-						passed=0
-				fi
-				if [[ $hit = 0 ]]; then
-					pacman -r "$newroot" -U"$sync" "$yaourt_cache"/$wanted*.xz --noconfirm || die " Failed to install packages" "clean_install"
-					hit=""
-				else
-					if [[ $passed != 0 ]]; then
-						su usertmp -c "yaourt -r $newroot -S$sync $wanted --noconfirm" || die " Failed to install packages" "clean_install"
-						hit=""
-						passed=""
-					fi
-				fi
-			else
-				su usertmp -c "yaourt -r $newroot -S$sync $wanted --noconfirm" || die " Failed to install packages" "clean_install"
-			fi
-		done <<< ${result[@]}
-	else
-		echo_valid " Nothing to do for yaourt"
-	fi
+	unset named rc dps dps_parsed
+}
+
+# ${1} name of the package
+# ${2} working directory
+aur_get_pkgbuild(){
+	
+	local named work_dir
+	
+	named="${1}"
+	work_dir="${2}"
+		
+	cower -df "${named}" -t "${work_dir}" --ignorerepo
+
+	unset named work_dir
+}
+
+# ${1} name of the package
+# ${2} variable to change by pkgver-pkgrel value
+aur_get_pkgver_pkgrel(){
+	
+	local named
+	named="${1}"
+	return_value="${2}"
+	
+	ver_rel=$(cower -s ${named} --format=%v)
+	
+	eval "$return_value=$ver_rel"
+	
+	unset named return_value
+}
+
+# ${1} name of the package
+# ${2} working directory
+aur_build(){
+	
+	local named work_dir _oldpwd
+	_oldpwd=$(pwd)
+	named="${1}"
+	work_dir="${2}"
+	
+	cd "${work_dir}"
+	
+	su usertmp -c "makepkg -Cs --noconfirm --needed --nosign"
+	
+	cd "${_oldpwd}"
+	
+	unset named work_dir _oldpwd
+}
+
+# ${1} name of the package
+aur_install(){
+	local work_dir named _oldpwd pkg_ver_rel
+
+	_oldpwd=$(pwd)
+	named="${1}"
+	work_dir=$(mktemp -d /tmp/$named.XXXXXX)
+	
+	echo_display " Install $named from AUR"
+	
+	echo_display " Get pkgbuild for ${named}"	
+	aur_get_pkgbuild "${named}" "${work_dir}"
+	
+	cd "${work_dir}/$named"
+	echo_display " Resolve dependencies for ${named}"
+	aur_deps "${named}"
+
+	echo_display " Build the package ${named}"
+	chmod -R 0777 ${work_dir}
+	aur_build "${named}" "${work_dir}/$named"
+	
+	echo_display " Installing package ${named}"
+	
+	pacman -r "$NEWROOT" -U ${named}-*.pkg.tar.xz --config "$GENERAL_DIR/$CONFIG_DIR/pacman.conf" --cachedir "$CACHE_DIR" --noconfirm || die " Failed to install packages $named" "clean_install"
+	
+	cd "${_oldpwd}"
+	
+	unset work_dir named _oldpwd pkg_ver_rel
 }
 
 ##		Sync database
@@ -405,144 +532,118 @@ aur_cache(){
 sync_data(){
 	
 	echo_display " Synchronize database"
-	pacman -Sy --config "$gen_dir/$config_dir/pacman.conf" || die " Impossible to synchronize database" "clean_install"
+	pacman -Sy --config "$GENERAL_DIR/$CONFIG_DIR/pacman.conf" || die " Impossible to synchronize database" "clean_install"
 	
-	echo_display " Copying database on $newroot/var/lib/pacman/sync/"	
-	mkdir -p -m0755 "$newroot/var/lib/pacman/sync/"
-	cp /var/lib/pacman/sync/*.db "$newroot/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.db doesn't exit on host" "clean_install"
+	echo_display " Copying database on $NEWROOT/var/lib/pacman/sync/"	
+	mkdir -p -m0755 "$NEWROOT/var/lib/pacman/sync/"
+	cp /var/lib/pacman/sync/*.db "$NEWROOT/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.db doesn't exit on host" "clean_install"
 		
 }
 
-##		Copy directory rootfs in $newroot
+##		Copy directory rootfs in $NEWROOT
 
 copy_rootfs(){
-	echo_display " Copying configuration files in ${newroot}"
-	cp -af "$dir"/config/"$config_dir"/rootfs/* "$newroot"/ || die " Impossible to copy files" "clean_install"
+	
+	echo_display " Copying configuration files in ${NEWROOT}"
+	
+	cp -af "$GENERAL_DIR/$CONFIG_DIR/rootfs/"* "$NEWROOT"/ || die " Impossible to copy files" "clean_install"
 }
 
-##		Customize newroot
+##		Customize NEWROOT
 
 enter_chroot(){
+	
 	# make sure the necessary is present before enter on chroot
-	check_mountpoint "$newroot"
+	check_mountpoint "$NEWROOT"
 	if (( $? )); then
 		echo_retry " This is not a valid mountpoint"
-		echo_retry " You need to mount a device on $newroot or choose another directory"
+		echo_retry " You need to mount a device on $NEWROOT or choose another directory"
 		(sleep 4) && echo_info " Returning to the main_menu" && (sleep 1) && main_menu
 	fi
 		
 	create_dir
-	mount_umount "$newroot" "mount"
+	mount_umount "$NEWROOT" "mount"
 	user_add "usertmp" || die " Impossible to create user usertmp" "clean_install"
 	copy_rootfs
 	copy_file
 	define_root
 	
-	echo_display " Enter on chroot of ${newroot}"	
-	chroot "$newroot" "$src_functions"/customizeChroot || die " Failed to enter on ${newroot} or Failed to execute functions customizeChroot" "clean_install"
+	echo_display " Chroot on ${NEWROOT}"	
+	chroot "$NEWROOT" "$SOURCES_FUNC"/customizeChroot || die " Failed to enter on ${NEWROOT} or Failed to execute functions customizeChroot" "clean_install"
 	
-	cp -f "$newroot"/"$src_functions"/install.conf /etc/obarun/install.conf
+	cp -f "$NEWROOT"/"$SOURCES_FUNC"/install.conf /etc/obarun/install.conf
 }
 
-##		Enter in $newroot with mc
+##		Enter in $NEWROOT with mc
 
 mc_newroot(){
-	check_mountpoint "$newroot"
+	
+	check_mountpoint "$NEWROOT"
 	if (( $? )); then
 		echo_retry " This is not a valid mountpoint"
-		echo_retry " You need to mount a device on $newroot or choose another directory"
+		echo_retry " You need to mount a device on $NEWROOT or choose another directory"
 		(sleep 4) && echo_info " Returning to the main_menu" && (sleep 1) && main_menu
 	fi
 	
 	
 	create_dir
-	mount_umount "$newroot" "mount"
-	SHELL=/bin/sh chroot "$newroot" /usr/bin/mc
+	mount_umount "$NEWROOT" "mount"
+	SHELL=/bin/sh chroot "$NEWROOT" /usr/bin/mc
 }
 
-##		Open an interactive shell on newroot
+##		Open an interactive shell on NEWROOT
 
 call_shell(){
-	check_mountpoint "$newroot"
+	
+	check_mountpoint "$NEWROOT"
 	if (( $? )); then
 		echo_retry " This is not a valid mountpoint"
-		echo_retry " You need to mount a device on $newroot or choose another directory"
+		echo_retry " You need to mount a device on $NEWROOT or choose another directory"
 		(sleep 4) && echo_info " Returning to the main_menu" && (sleep 1) && main_menu
 	fi
 		
 	create_dir
-	mount_umount "$newroot" "mount"
+	mount_umount "$NEWROOT" "mount"
 	echo_info " Tape exit when you have finished"
-	if [[ -e "$newroot/usr/bin/zsh" ]]; then
-		SHELL=/bin/sh chroot "$newroot" /usr/bin/zsh 
+	if [[ -e "$NEWROOT/usr/bin/zsh" ]]; then
+		SHELL=/bin/sh chroot "$NEWROOT" /usr/bin/zsh 
 	else
-		SHELL=/bin/sh chroot "$newroot"
+		SHELL=/bin/sh chroot "$NEWROOT"
 	fi
 }
-
-##		Define root user
-
-define_root(){
-	if [[ ! $(cat $newroot/etc/shadow | grep "root::") == "" ]]; then
-		echo_display " Change shell for root user on $newroot"
-		usermod -R "$newroot" -s /usr/bin/zsh root
-		
-		echo_display " Copy skeleton to $newroot/root/"
-		cp -rT "$newroot/etc/skel/" "$newroot/root/"
-		
-		chmod 0750 "$newroot/root"
-		
-		echo_display " You need to define root password"
-		pass_root
-		echo_valid " root user was modified successfully"
-	fi
-	if [[ -e "$newroot/root/.zlogin" ]]; then
-		echo_display " Removing auto-login for root"
-		rm "$newroot/root/.zlogin"
-	fi
-}
-
-pass_root(){
-	passwd -R "$newroot" root
-	while [[ $? -ne 0 ]]; do
-		echo_retry " Password do not match, please retry"
-		passwd -R "$newroot" root
-	done
-}
-
 
 ##		Start the installation
 
 install_system(){
-	check_mountpoint "$newroot"
+	
+	check_mountpoint "$NEWROOT"
 	if (( $? )); then
 		echo_retry " This is not a valid mountpoint"
-		echo_retry " You need to mount a device on $newroot or choose another directory"
+		echo_retry " You need to mount a device on $NEWROOT or choose another directory"
 		(sleep 4) && echo_info " Returning to the main_menu" && (sleep 1) && main_menu
 	fi
-	
-	
+		
 	create_dir
-	mount_umount "$newroot" "mount"
+	mount_umount "$NEWROOT" "mount"
 	user_add "usertmp" || die " Impossible to create user usertmp" "clean_install"
 	copy_file
-	check_gpg "$gpg_dir"
+	check_gpg "$GPG_DIR"
 	sync_data
-	check_pac_needed
-	install_pack
-	gen_fstab "$newroot"
+	install_package
+	gen_fstab "$NEWROOT"
 	copy_rootfs
 	define_root
-	pack=0
 }
 
 ## 		Main menu
 
 main_menu(){
 
-local step=100
+local step=100 enter
 
-while [[ "$step" !=  13 ]]; do
+while [[ "$step" !=  12 ]]; do
+	# reload the source, this is allow to see the change made on the menu
+	source /etc/obarun/install.conf
 	clear
 	echo_bold ""
 	echo_bold ""
@@ -560,33 +661,31 @@ while [[ "$step" !=  13 ]]; do
 	echo_info_menu "                            Configuration"
 	echo_info_menu "***************************************************************************************"
 	echo_bold ""
-	echo_bold " 1  -  Select Editor ${green}[$editor]"
-	echo_bold " 2  -  Choose your Desktop environment ${green}[$config_dir]"
+	echo_bold " 1  -  Select Editor ${green}[$EDITOR]"
+	echo_bold " 2  -  Choose your Desktop environment ${green}[$CONFIG_DIR]"
 	echo_bold " 3  -  Edit pacman.conf file used by the script"
-	echo_bold " 4  -  Define cache directory for pacman ${green}[$cache_dir]"
+	echo_bold " 4  -  Define cache directory for pacman ${green}[$CACHE_DIR]"
 	echo_bold " 5  -  Edit the list of packages that will be installed (AUR including)"
-	echo_bold " 6  -  Enter root directory for installation ${green}[$newroot]"
+	echo_bold " 6  -  Enter root directory for installation ${green}[$NEWROOT]"
 	echo_bold ""
 	echo_info_menu "***************************************************************************************"
 	echo_info_menu "                            Installation"
 	echo_info_menu "***************************************************************************************"
 	echo_bold ""
-	echo_bold " 7  -  Install the base system"
-	echo_bold " 8  -  Launch the script customizeChroot"
-	echo_bold ""
-	echo_bold " 9  -  Resume an aborted installation"	 	
+	echo_bold " 7  -  Install the system or resume an aborted installation"
+	echo_bold " 8  -  Customize the fresh installation"
 	echo_bold ""
 	echo_info_menu "***************************************************************************************"
 	echo_info_menu "                            Expert mode"
 	echo_info_menu "  Assumptions : the base system must be installed at least before using this mode"
 	echo_info_menu "***************************************************************************************"
 	echo_bold ""
-	echo_bold " 10 -  Edit the script customizeChroot"
-	echo_bold " 11 -  Launch a shell on ${green}[$newroot]${reset}${bold} directory"
-	echo_bold " 12 -  Browse ${green}[$newroot]${reset}${bold} with Midnight Commander"
+	echo_bold " 9  -  Edit the script customizeChroot"
+	echo_bold " 10 -  Launch a shell on ${green}[$NEWROOT]${reset}${bold} directory"
+	echo_bold " 11 -  Browse ${green}[$NEWROOT]${reset}${bold} with Midnight Commander"
 	echo_bold ""
 	echo_bold ""
-	echo_bold " ${red}13 -  Exit installation script"
+	echo_bold " ${red}12 -  Exit installation script"
 	echo_bold ""
 	echo_bold ""
 	echo_display " Enter your choice :";read  step
@@ -600,18 +699,17 @@ while [[ "$step" !=  13 ]]; do
 			6)	choose_rootdir;; # Never comment this options
 			7)	install_system;;
 			8)	enter_chroot;;
-			9)	pack=1
-				install_system;;
-			10)	edit_customize_chroot;;
-			11) call_shell;;
-			12)	mc_newroot;;
-			13) echo_display " Exiting"
+			9)	edit_customize_chroot;;
+			10) call_shell;;
+			11)	mc_newroot;;
+			12) echo_display " Exiting"
 				clean_install;;
 			*) echo_retry " Invalid number, Please retry: "
 		esac
 		echo_info " Press enter to return to the Main menu"
 		read enter 
 done
+unset enter
 }
 
 #####################################		Functions for customizeChroot script
@@ -620,9 +718,11 @@ done
 
 customizeChroot_menu(){
 
-local step=100
+local step=100 enter
 
 while [[ "$step" !=  11 ]]; do
+	# reload the source, this is allow to see the change made on the menu
+	source "${SOURCES_FUNC}"/install.conf
 	clear
 	echo_bold ""
 	echo_bold ""
@@ -630,12 +730,12 @@ while [[ "$step" !=  11 ]]; do
 	echo_info_menu "              CustomizeChroot menu"
 	echo_info_menu "**************************************************************"
 	echo_bold ""
-	echo_bold " 1  -  Define hostname ${green}[$hostname]"
-	echo_bold " 2  -  Define locale ${green}[$locale]"
-	echo_bold " 3  -  Define localtime ${green}[$zone/$subzone]"
-	echo_bold " 4  -  Define a new user ${green}[$newuser]"
-	echo_bold " 5  -  Define console keymap ${green}[$keymap]"
-	echo_bold " 6  -  Define desktop keymap ${green}[$xkeymap]"
+	echo_bold " 1  -  Define hostname ${green}[$HOSTNAME]"
+	echo_bold " 2  -  Define locale ${green}[$LOCALE]"
+	echo_bold " 3  -  Define localtime ${green}[$ZONE/$SUBZONE]"
+	echo_bold " 4  -  Define a new user ${green}[$NEWUSER]"
+	echo_bold " 5  -  Define console keymap ${green}[$KEYMAP]"
+	echo_bold " 6  -  Define desktop keymap ${green}[$XKEYMAP]"
 	echo_bold ""
 	echo_bold " 7  -  Continue the installation"
 	echo_bold ""
@@ -663,63 +763,74 @@ while [[ "$step" !=  11 ]]; do
 			7)	echo_display " Continue installation"
 				break;;
 			8)	edit_rc_conf;;
-			9)	mc_enter;;
-			10)	clean_once_file rm "/root/tmp/obarun-install";;
+			9)	mc /;;
+			10)	clean_once_file "rm" "/root/tmp/obarun-install";;
 			11)	exit;;
 			*) echo_retry " Invalid number, please retry:"
 		esac
 		echo_info " Press enter to return to the customizeChroot menu"
 		read enter 
 done
+unset enter
 }
 
 ## 		Define hostname
 
 define_hostname(){
+	
+	local _hostname
 	echo_display " Enter your hostname"
-	read hostname
-	echo_valid " hostname is now : $hostname"
 	
-	sed -i "s,hostname=.*$,hostname=\"$hostname\",g" "$src_functions"/install.conf
+	read _hostname
 	
+	echo_valid " hostname is now : $_hostname"
+	
+	sed -i "s,HOSTNAME=.*$,HOSTNAME=\"$_hostname\",g" "$SOURCES_FUNC"/install.conf
+	
+	unset _hostname
 }
 
 ##		Define locale
 
 define_locale(){
-	local enter
+	
+	local enter _locale
+	
 	echo_display " Define your locale by uncomment desired line, only one line is allowed"
 	echo_info " Press enter to continue"
+	
 	read enter
 	
-	"$editor" /etc/locale.gen
+	"$EDITOR" /etc/locale.gen
 	
-	locale=$(grep -v "#" /etc/locale.gen | awk -F " " '{ print $1 }')
+	_locale=$(grep -v "#" /etc/locale.gen | awk -F " " '{ print $1 }')
 	
-	echo_valid " your locale is now : $locale"
+	echo_valid " your locale is now : $_locale"
 	
-	sed -i "s,locale=.*$,locale=\"$locale\",g" "$src_functions"/install.conf
+	sed -i "s,LOCALE=.*$,LOCALE=\"$_locale\",g" "$SOURCES_FUNC"/install.conf
 	
+	unset enter _locale
 }
 
 ##		Define localtime
 
 define_localtime(){
+
 	zone_list=$(ls -d --group-directories-first /usr/share/zoneinfo/* | awk -F "/usr/share/zoneinfo/" '{ print $2 }' | uniq)
 	zone_list+=" Exit"
-	select zone in $zone_list; do
-		case $zone in 
+	select _zone in ${zone_list[@]}; do
+		case $_zone in 
 			Exit)customizeChroot_menu
 			break;;
-			*)if check_elements "$zone" $zone_list; then
-				if [[  -d "/usr/share/zoneinfo/$zone" ]]; then
-					sub_zone_list=$(ls /usr/share/zoneinfo/$zone/* | awk -F "/usr/share/zoneinfo/$zone/" '{ print $2 }') 
+			*)if check_elements "$_zone" ${zone_list[@]}; then
+				if [[  -d "/usr/share/zoneinfo/$_zone" ]]; then
+					sub_zone_list=$(ls /usr/share/zoneinfo/$_zone/* | awk -F "/usr/share/zoneinfo/$_zone/" '{ print $2 }') 
 					sub_zone_list+=" Exit"
-					select subzone in $sub_zone_list; do
-						case $subzone in
+					select _subzone in ${sub_zone_list[@]}; do
+						case $_subzone in
 							Exit)define_localtime
 								break;;
-							*)if check_elements "$subzone" $sub_zone_list; then
+							*)if check_elements "$_subzone" ${sub_zone_list[@]}; then
 								break
 							else
 								echo_retry " Invalid number, retry :"
@@ -734,92 +845,117 @@ define_localtime(){
 		esac
 	done
 }
-
 call_localtime(){
 	
-	unset zone subzone
+	local _zone _subzone
+	
+	unset ZONE SUBZONE
+	
 	echo_display " Choose your country/department"
+	
 	define_localtime
 	
-	echo_valid " Your localtime is now : $zone/$subzone"
+	echo_valid " Your localtime is now : $_zone/$_subzone"
 	
-	sed -i "s,zone=.*$,zone=\"$zone\",g" "$src_functions"/install.conf
-	sed -i "s,subzone=.*$,subzone=\"$subzone\",g" "$src_functions"/install.conf
+	sed -i "s,ZONE=.*$,ZONE=\"$_zone\",g" "$SOURCES_FUNC"/install.conf
+	sed -i "s,SUBZONE=.*$,SUBZONE=\"$_subzone\",g" "$SOURCES_FUNC"/install.conf
 	
+	unset _zone _subzone
 }
 
 ##		Define keymap
 
 define_keymap(){
-	echo_display " Choose your console keymap"
+	
+	local _keymap
 	local -a key_list
+		
+	echo_display " Choose your console keymap"
+
 	key_list=$(ls -R /usr/share/kbd/keymaps | grep "map.gz" | sed 's/\.map\.gz//g' | sort | less)
 	key_list+=" Exit"
-	select keymap in $key_list; do
-		case "$keymap" in
-			Exit)unset keymap
+	select _keymap in ${key_list[@]}; do
+		case "$_keymap" in
+			Exit)unset _keymap
 				break;;
-			*)if check_elements "$keymap" $key_list; then
-				echo_valid " Your keymap is now : $keymap"
+			*)if check_elements "$_keymap" ${key_list[@]}; then
+				echo_valid " Your keymap is now : $_keymap"
 				break
 			  else 
 				echo_retry " Invalid number, retry :"
 			  fi
 		esac
 	done
-	unset key_list	
+
+	sed -i "s,KEYMAP=.*$,KEYMAP=\"$_keymap\"," "$SOURCES_FUNC"/install.conf
 	
-	sed -i "s,^keymap=.*$,keymap=\"$keymap\"," "$src_functions"/install.conf
-	
+	unset key_list _keymap
 }
 
 ##		Define xkeymap
 
 define_xkeymap(){
-	echo_display " Choose your Desktop environment keymap"
+	
+	local _xkeymap
 	local -a key_list
+	
+	echo_display " Choose your Desktop environment keymap"
+	
 	key_list="af al am at az ba bd be bg br bt bw by ca cd ch cm cn cz de dk ee es et eu fi fo fr gb ge gh gn gr hr hu ie il in iq ir is it jp ke kg kh kr kz la lk lt lv ma md me mk ml mm mn mt mv ng nl no np pc ph pk pl pt ro rs ru se si sk sn sy tg th tj tm tr tw tz ua us uz vn za"
 	key_list+=" Exit"
-	select xkeymap in $key_list; do
-		case "$xkeymap" in
-			Exit)unset xkeymap
+	select _xkeymap in ${key_list[@]}; do
+		case "$_xkeymap" in
+			Exit)unset _xkeymap
 				break;;
-			*)if check_elements "$xkeymap" $key_list; then
-				echo_valid " Your Desktop keymap is now : $xkeymap"
+			*)if check_elements "$_xkeymap" ${key_list[@]}; then
+				echo_valid " Your Desktop keymap is now : $_xkeymap"
 				break
 			  else 
 				echo_retry " Invalid number, retry :"
 			  fi
 		esac
 	done
-	unset key_list
-		
-	sed -i "s,^xkeymap=.*$,xkeymap=\"$xkeymap\"," "$src_functions"/install.conf
 	
+	sed -i "s,XKEYMAP=.*$,XKEYMAP=\"$_xkeymap\"," "$SOURCES_FUNC"/install.conf
+	
+	unset key_list _xkeymap
 }
 
 ##		Define a new user
 
 define_user(){
+	
+	local _newuser f
+	local -a user_exist
+	
 	echo_display " Enter the name for the user"
-	read newuser
-	while [[ ! $(cat /etc/passwd | grep "$newuser") == "" ]]; do
-		echo_retry " $newuser already exit, please enter another name :"
-		read newuser
+	read _newuser
+	
+	user_exist=$(grep "$_newuser" /etc/passwd | awk -F":" '{print $1}')
+	
+	for f in ${user_exist[@]}; do
+		if [[ $f == $_newuser ]]; then			
+			echo_retry " $_newuser already exit, please enter another name :"
+			define_user
+		fi
 	done
-	while [[ ${#newuser} -eq 0 ]] || [[ $newuser =~ \ |\' ]] || [[ $newuser =~ [^a-z0-9\ ] ]]; do
+	
+	if [[ ${#_newuser} -eq 0 ]] || [[ $_newuser =~ \ |\' ]] || [[ $_newuser =~ [^a-z0-9\ ] ]]; then
 		echo_retry " Invalid user name. Please retry :"
-		read newuser
-	done
+		define_user
+	fi
 	
-	echo_valid " Name of the new account user is now : $newuser"
+	echo_valid " Name of the new account user is now : $_newuser"
 	
-	sed -i "s,newuser=.*$,newuser=\"$newuser\",g" "$src_functions"/install.conf
+	sed -i "s,NEWUSER=.*$,NEWUSER=\"$_newuser\",g" "$SOURCES_FUNC"/install.conf
+	
+	unset _newuser user_exist f
 }
 
-##		Config $newroot with variable picked by user
+##		Config $NEWROOT with variable picked by user
 
 config_custofile(){
+	
 	config_hostname
 	config_locale
 	config_localetime
@@ -829,43 +965,54 @@ config_custofile(){
 }
 
 config_hostname(){
-	if [[ "$hostname" != "" ]]; then
+	
+	if [[ "$HOSTNAME" != "" ]]; then
 		sed -i 's/ .*$//' /etc/hosts
 	fi
 	if [[ -h /etc/s6.conf ]]; then
-		sed -i "s/HOSTNAME=.*$/HOSTNAME=$hostname/g" /etc/s6/s6.conf
+		sed -i "s/HOSTNAME=.*$/HOSTNAME=$HOSTNAME/g" /etc/s6/s6.conf
 	else
-		sed -i "s/HOSTNAME=\".*$/HOSTNAME=\"$hostname\"/g" /etc/rc.conf
+		sed -i "s/HOSTNAME=\".*$/HOSTNAME=\"$HOSTNAME\"/g" /etc/rc.conf
 	fi
-	echo "$hostname" > /etc/hostname
-	sed -i '/127.0.0.1/s/$/ '$hostname'/' /etc/hosts
-	sed -i '/::1/s/$/ '$hostname'/' /etc/hosts
+	
+	echo "$HOSTNAME" > /etc/hostname
+	sed -i '/127.0.0.1/s/$/ '$HOSTNAME'/' /etc/hosts
+	sed -i '/::1/s/$/ '$HOSTNAME'/' /etc/hosts
 	
 	echo_valid " hostname was configured successfully"
 }
+
 config_locale(){
 	
+	local _locale
+	
+	# make sure the variable LOCALE is not empty before launch locale-gen
+	_locale="${LOCALE:-en_US.UTF-8}"
+	sed -i "s:^#${_locale}:${_locale}:g" /etc/locale.gen
+	
 	locale-gen
-	echo LANG="$locale" > /etc/locale.conf
+	
+	echo LANG="$LOCALE" > /etc/locale.conf
     echo LC_COLLATE=C >> /etc/locale.conf
 	
 	echo_valid " Locale was created successfully"
 }
 
 config_localetime(){
-	if [[ "$subzone" != "" ]]; then
-		ln -sf /usr/share/zoneinfo/$zone/$subzone /etc/localtime
+	
+	if [[ -n "$SUBZONE" ]]; then
+		ln -sf /usr/share/zoneinfo/$ZONE/$SUBZONE /etc/localtime
 		if [[ -h /etc/s6.conf ]]; then
-			sed -i "s/TZ=.*$/TZ=$zone\/$subzone/g" /etc/s6/s6.conf
+			sed -i "s/TZ=.*$/TZ=$ZONE\/$SUBZONE/g" /etc/s6/s6.conf
 		else
-			sed -i "s/TIMEZONE=\".*$/TIMEZONE=\"$zone\/$subzone\"/g" /etc/rc.conf
+			sed -i "s/TIMEZONE=\".*$/TIMEZONE=\"$ZONE\/$SUBZONE\"/g" /etc/rc.conf
 		fi		
 	else
-		ln -sf /usr/share/zoneinfo/$zone /etc/localtime
+		ln -sf /usr/share/zoneinfo/$ZONE /etc/localtime
 		if [[ -h /etc/s6.conf ]]; then
-			sed -i "s/TZ=.*$/TZ=$zone/g" /etc/s6/s6.conf
+			sed -i "s/TZ=.*$/TZ=$ZONE/g" /etc/s6/s6.conf
 		else
-			sed -i "s/TIMEZONE=\".*$/TIMEZONE=\"$zone\"/g" /etc/rc.conf
+			sed -i "s/TIMEZONE=\".*$/TIMEZONE=\"$ZONE\"/g" /etc/rc.conf
 		fi
 	fi
 	
@@ -873,55 +1020,59 @@ config_localetime(){
 }
 
 pass_user(){
-	passwd "$newuser"
+	
+	passwd "$NEWUSER"
 	while [[ $? -ne 0 ]]; do
 		echo_retry " Password do not match, please retry"
-		passwd "$newuser"
+		passwd "$NEWUSER"
 	done
 }
 
 config_user(){
 	
-	useradd -m -g users -G "audio,floppy,log,network,rfkill,scanner,storage,optical,power,wheel,video" -s /usr/bin/zsh "$newuser"
-	echo_display " You need to define $newuser password"
+	useradd -m -g users -G "audio,floppy,log,network,rfkill,scanner,storage,optical,power,wheel,video" -s /usr/bin/zsh "$NEWUSER"
+	echo_display " You need to define $NEWUSER password"
 	pass_user
 	
-	echo_valid " User $newuser was created successfully" 
+	echo_valid " User $NEWUSER was created successfully" 
 }
 
 config_keymap(){
+	
 	if [[ -h /etc/s6.conf ]]; then
-		sed -i "s,KEYMAP=.*$,KEYMAP=$keymap,g" /etc/s6/s6.conf
+		sed -i "s,KEYMAP=.*$,KEYMAP=$KEYMAP,g" /etc/s6/s6.conf
 	else
-		sed -i "s,KEYMAP=\".*$,KEYMAP=\"$keymap\",g" /etc/rc.conf
+		sed -i "s,KEYMAP=\".*$,KEYMAP=\"$KEYMAP\",g" /etc/rc.conf
 	fi
 	
 	echo_valid " Console keymap was configured successfully"
 }
 
 config_xkeymap(){
-	if [[ -e "/home/$newuser/.xinitrc" ]]; then
-		echo_notvalid " Define locale in /home/$newuser/.xinitrc"
-		sed -i 's/#setxkbmap.*$/setxkbmap\ '$xkeymap'\ \&/g' /home/$newuser/.xinitrc
-		sed -i 's/setxkbmap.*$/setxkbmap\ '$xkeymap'\ \&/g' /home/$newuser/.xinitrc
+	
+	if [[ -e "/home/$NEWUSER/.xinitrc" ]]; then
+		echo_notvalid " Define keymap for X server in /home/$NEWUSER/.xinitrc"
+		sed -i 's/#setxkbmap.*$/setxkbmap\ '$XKEYMAP'\ \&/g' /home/$NEWUSER/.xinitrc
+		sed -i 's/setxkbmap.*$/setxkbmap\ '$XKEYMAP'\ \&/g' /home/$NEWUSER/.xinitrc
 	fi
 	
 	if [[ -e "/root/.xinitrc" ]]; then
-		echo_notvalid " Define locale in /root/.xinitrc"
-		sed -i 's/#setxkbmap.*$/setxkbmap\ '$xkeymap'\ \&/g' /root/.xinitrc
-		sed -i 's/setxkbmap.*$/setxkbmap\ '$xkeymap'\ \&/g' /root/.xinitrc
+		echo_notvalid " Define keymap for X server in /root/.xinitrc"
+		sed -i 's/#setxkbmap.*$/setxkbmap\ '$XKEYMAP'\ \&/g' /root/.xinitrc
+		sed -i 's/setxkbmap.*$/setxkbmap\ '$XKEYMAP'\ \&/g' /root/.xinitrc
 	fi
 	
-	echo_valid " Desktop keymap was configured successfully"
+	echo_valid " Desktop xkeymap was configured successfully"
 }
 
 ##		Edit rc.conf
 
 edit_rc_conf(){
+	
 	if [[ -h /etc/s6.conf ]]; then
-		edit_file "s6.conf" "/etc/s6" "$editor"
+		edit_file "s6.conf" "/etc/s6" "$EDITOR"
 	else
-		edit_file "rc.conf" "/etc/s6" "$editor"
+		edit_file "rc.conf" "/etc/" "$EDITOR"
 	fi
 	
 }
@@ -929,6 +1080,7 @@ edit_rc_conf(){
 ##		Define resolv.conf
 
 define_resolv(){
+	
 	echo_display " Define resolv.conf"
 	if [[ -e /etc/resolv.conf.pacorig ]]; then 
 		mv /etc/resolv.conf.pacorig /etc/resolv.conf
@@ -936,32 +1088,30 @@ define_resolv(){
 }
 
 
-##		Enter in the fresh installation with mc
-
-mc_enter(){
-	mc /
-}
-
 ##		Remove once_file
 
 clean_once_file(){
-	local action dir f_
+	
+	local action dir f_ file
+	local -a file_list
+	
 	action="${1}"
 	dir="${2}"
-	if [[ -d "${src_functions}" ]]; then
+	
+	if [[ -d "${SOURCES_FUNC}" ]]; then
 		file_list=$(ls $dir/ | uniq) 
 		file_list+=" Remove_all_files"
 		file_list+=" Exit"
-		select file in $file_list; do
+		select file in ${file_list[@]}; do
 			case $file in 
 				Exit)break;;
-				Remove_all_files) 	for f_ in $file_list; do
+				Remove_all_files) 	for f_ in ${file_list[@]}; do
 										if [[ ! "$f_" = @(Exit|Remove_all_files) ]]; then
-											"$action" "$dir/$f_"
+											eval "$action" "$dir/$f_"
 										fi
 									done;;
-				*)if check_elements "$file" $file_list; then
-						"$action" "${dir}/${file}"
+				*)if check_elements "$file" ${file_list[@]}; then
+						eval "$action" "${dir}/${file}"
 						clean_once_file "$action" "$dir"				
 				else 
 					echo_retry " Invalid number, retry :"
@@ -973,6 +1123,8 @@ clean_once_file(){
 	else
 		echo_info " Directory /root/tmp/obarun-install does not exist"
 	fi
+
+	unset action dir f_ file file_list
 }
 	
 ##		Define/configure Bootloader
@@ -983,22 +1135,27 @@ clean_once_file(){
 #}
 
 syslinux_install(){
+	
 	local opts="$1"
+	
 	echo_display " Installing bootloader: syslinux"
 	syslinux-install_update $opts
 	
 	echo_display " Maybe the partition name in the root parameter needs to be replaced."
 	echo_display " Be sure to point the root partition in the line APPEND."
 	syslinux_edit
+	
 	echo_valid " Syslinux install terminate"
 }
 
 syslinux_edit(){
+	
 	echo_display " Do you want edit syslinux.cfg [y|n]"
+	
 	reply_answer
 	if (( ! $? )); then
 		check_editor
-		"$editor" "/boot/syslinux/syslinux.cfg"
+		"$EDITOR" "/boot/syslinux/syslinux.cfg"
 	fi
 }
 

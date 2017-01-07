@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/bash
 # This script is under license BEER-WARE
 # "THE BEER-WARE LICENSE" (Revision 42):
 # <eric@obarun.org> wrote this file.  As long as you retain this notice you
@@ -11,23 +11,26 @@
 #  3) A valid mirror appears in /etc/pacman.d/mirrorlist
 #
 
-shopt -s extglob
-
 ##		Check is the functions file exits
+sourcing(){
+	
+	local list
+	
+	for list in /usr/lib/obarun/{common_functions,install_functions} /etc/obarun/install.conf; do
+		if [[ -f "${list}" ]]; then
+			source "${list}"
+		else
+			echo_error " Missing file : ${list}"
+			exit	
+		fi
+	done
+	
+	unset list
+}
+sourcing
 
-if [[ -f /usr/lib/obarun/common_functions ]]; then
-	source /usr/lib/obarun/common_functions
-else
-	echo "==>> Missing file : common_functions"
-	exit	
-fi
-
-if [[ -f /usr/lib/obarun/install_functions ]]; then
-	source /usr/lib/obarun/install_functions
-else
-	echo "==>> Missing file : install_functions"
-	exit	
-fi
+shellopts_save
+shellopts_set_unset "extglob" 0
 
 ##		Clean before exit
 
@@ -47,7 +50,7 @@ main_update(){
 	reply_answer
 
 	if (( ! $? )); then
-		pac_update "obarun-install" "/var/lib/obarun/obarun-install" "$git_addr" || die " Impossible to update" "clean_install"
+		pac_update "obarun-install" "/var/lib/obarun/obarun-install" "$GIT_ADDR" || die " Impossible to update" "clean_install"
 		source /usr/lib/obarun/install_functions
 	else
 		echo_retry " Some functionalities will cannot working properly without updating"
@@ -56,7 +59,7 @@ main_update(){
 	fi
 }
 
-if [[ "$update" == "yes" ]]; then
+if [[ "$UPDATE" == "yes" ]]; then
 	main_update
 fi
 
