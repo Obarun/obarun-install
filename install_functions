@@ -1050,16 +1050,16 @@ config_keymap(){
 
 config_xkeymap(){
 	
-	if [[ -e "/home/$NEWUSER/.xinitrc" ]]; then
-		echo_notvalid " Define keymap for X server in /home/$NEWUSER/.xinitrc"
-		sed -i 's/#setxkbmap.*$/setxkbmap\ '$XKEYMAP'\ \&/g' /home/$NEWUSER/.xinitrc
-		sed -i 's/setxkbmap.*$/setxkbmap\ '$XKEYMAP'\ \&/g' /home/$NEWUSER/.xinitrc
+	if [[ -e "/home/$NEWUSER/.config/openbox/autostart" ]]; then
+		echo_notvalid " Define keymap for X server in /home/$NEWUSER/.config/openbox/autostart"
+		sed -i 's/#setxkbmap.*$/setxkbmap\ '$XKEYMAP'\ \&/g' /home/$NEWUSER/.config/openbox/autostart
+		sed -i 's/setxkbmap.*$/setxkbmap\ '$XKEYMAP'\ \&/g' /home/$NEWUSER/.config/openbox/autostart
 	fi
 	
-	if [[ -e "/root/.xinitrc" ]]; then
-		echo_notvalid " Define keymap for X server in /root/.xinitrc"
-		sed -i 's/#setxkbmap.*$/setxkbmap\ '$XKEYMAP'\ \&/g' /root/.xinitrc
-		sed -i 's/setxkbmap.*$/setxkbmap\ '$XKEYMAP'\ \&/g' /root/.xinitrc
+	if [[ -e "/root/.config/openbox/autostart" ]]; then
+		echo_notvalid " Define keymap for X server in /root/.config/openbox/autostart"
+		sed -i 's/#setxkbmap.*$/setxkbmap\ '$XKEYMAP'\ \&/g' /root/.config/openbox/autostart
+		sed -i 's/setxkbmap.*$/setxkbmap\ '$XKEYMAP'\ \&/g' /root/.config/openbox/autostart
 	fi
 	
 	echo_valid " Desktop xkeymap was configured successfully"
