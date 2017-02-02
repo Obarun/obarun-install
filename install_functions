@@ -499,32 +499,50 @@ aur_build(){
 
 # ${1} name of the package
 aur_install(){
-	local work_dir named _oldpwd pkg_ver_rel
 
+	local work_dir named _oldpwd pkg_ver_rel real_name
+	local -a installed_yet
+	
 	_oldpwd=$(pwd)
 	named="${1}"
-	work_dir=$(mktemp -d /tmp/$named.XXXXXX)
 	
-	echo_display " Install $named from AUR"
+	installed_yet=($(pacman -r ${NEWROOT} -Qsq ${named}))
 	
-	echo_display " Get pkgbuild for ${named}"	
-	aur_get_pkgbuild "${named}" "${work_dir}"
+	if [[ -z ${installed_yet[@]} ]]; then
+		rc=1
+	else
+		check_elements "${named}" ${installed_yet[@]}
+		rc=$?
+	fi
 	
-	cd "${work_dir}/$named"
-	echo_display " Resolve dependencies for ${named}"
-	aur_deps "${named}"
+	if (( "${rc}" )); then
+		unset rc
+		
+		work_dir=$(mktemp -d /tmp/$named.XXXXXX)
+	
+		echo_display " Install $named from AUR"
+	
+		echo_display " Get pkgbuild for ${named}"	
+		aur_get_pkgbuild "${named}" "${work_dir}"
+		
+		real_name=$(ls -A "${work_dir}")
+		
+		cd "${work_dir}/${real_name}"
+		echo_display " Resolve dependencies for ${named}"
+		aur_deps "${named}"
 
-	echo_display " Build the package ${named}"
-	chmod -R 0777 ${work_dir}
-	aur_build "${named}" "${work_dir}/$named"
+		echo_display " Build the package ${named}"
+		chmod -R 0777 ${work_dir}
+		aur_build "${named}" "${work_dir}/${real_name}"
 	
-	echo_display " Installing package ${named}"
+		echo_display " Installing package ${named}"
 	
-	pacman -r "$NEWROOT" -U ${named}-*.pkg.tar.xz --config "$GENERAL_DIR/$CONFIG_DIR/pacman.conf" --cachedir "$CACHE_DIR" --noconfirm || die " Failed to install packages $named" "clean_install"
+		pacman -r "$NEWROOT" -U ${named}-*.pkg.tar.xz --config "$GENERAL_DIR/$CONFIG_DIR/pacman.conf" --cachedir "$CACHE_DIR" --noconfirm || die " Failed to install packages $named" "clean_install"
 	
-	cd "${_oldpwd}"
+		cd "${_oldpwd}"
+	fi
 	
-	unset work_dir named _oldpwd pkg_ver_rel
+	unset work_dir named _oldpwd pkg_ver_rel installed_yet real_name
 }
 
 ##		Sync database
