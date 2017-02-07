@@ -8,7 +8,7 @@ pkgdesc=" Script for automatic installation"
 arch=(x86_64)
 url="file:///var/lib/obarun/$pkgname/update_package/$pkgname"
 license=('BEERWARE')
-depends=('arch-install-scripts' 'mc' 'git' 'pacman' 'cower' 'obarun-libs')
+depends=('arch-install-scripts' 'mc' 'git' 'pacman' 'cower' 'obarun-libs' 'obarun-install-themes')
 backup=('etc/obarun/install.conf')
 #install=
 source=("$pkgname::git+file:///var/lib/obarun/$pkgname/update_package/$pkgname")
@@ -33,7 +33,8 @@ package() {
 	install -Dm 0644 "LICENSE" "$pkgdir/usr/share/licenses/obarun-install/LICENSE"
 	install -Dm 0644 "PKGBUILD" "$pkgdir/var/lib/obarun/obarun-install/update_package/PKGBUILD"
 	
-	cp -aT "config" "$pkgdir/var/lib/obarun/obarun-install/config"	
+	install -dm 0755 "$pkgdir/var/lib/obarun/obarun-install/config"
+	#cp -aT "config" "$pkgdir/var/lib/obarun/obarun-install/config"	
 
 }
 
