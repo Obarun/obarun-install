@@ -53,7 +53,19 @@ main_update(){
 		pac_update "obarun-install" "/var/lib/obarun/obarun-install" "$GIT_ADDR" || die " Impossible to update" "clean_install"
 		source /usr/lib/obarun/install_functions
 	else
-		echo_retry " Some functionalities will cannot working properly without updating"
+		echo_retry " WARNING : Some functionalities will cannot works properly"
+		echo_info " Press enter to continue"
+		read enter
+	fi
+	
+	echo_display " Do you want to update obarun-install-themes package? [y|n]"
+	
+	reply_answer
+
+	if (( ! $? )); then
+		pac_update "obarun-install-themes" "/var/lib/obarun/obarun-install-themes" "https://github.com/Obarun/obarun-install-themes.git" || die " Impossible to update" "clean_install"
+	else
+		echo_retry " WARNING : Some configurations can be out of date"
 		echo_info " Press enter to continue"
 		read enter
 	fi
