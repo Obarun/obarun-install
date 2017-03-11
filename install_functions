@@ -391,7 +391,7 @@ install_package(){
 					;;
 				*)
 					unset rc
-					echo die "$tidy_loop can not be installed by pacman or AUR helper" "clean install"
+					die "$tidy_loop can not be installed by pacman or AUR helper" "clean install"
 					;;
 			esac
 		done
