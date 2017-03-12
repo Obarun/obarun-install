@@ -329,7 +329,7 @@ install_package(){
 	local -a installed list list_base result result_base pacman_list aur_list
 	
 	if [[ ! -e $GENERAL_DIR/$CONFIG_DIR/package_list/base ]]; then
-		die "The file named base at $GENERAL_DIR/$CONFIG_DIR/package_list/ must exist, please create one." "clean install"
+		die "The file named base at $GENERAL_DIR/$CONFIG_DIR/package_list/ must exist, please create one." "clean_install"
 	fi
 	
 	# bash is the first package installed by pacman
@@ -391,7 +391,7 @@ install_package(){
 					;;
 				*)
 					unset rc
-					die "$tidy_loop can not be installed by pacman or AUR helper" "clean install"
+					die "$tidy_loop can not be installed by pacman or AUR helper" "clean_install"
 					;;
 			esac
 		done
