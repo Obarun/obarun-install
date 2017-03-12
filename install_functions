@@ -294,7 +294,7 @@ copy_file(){
 # ${1} name of package
 choose_installer(){
 	
-	local b named
+	local b named group
 		
 	named="${1}"
 		
@@ -315,13 +315,12 @@ choose_installer(){
 	# be sure the named are not a group
 	# if it's the case return value for pacman
 	
-	for b in $(pacman -Sgq ${named[@]}); do
-		if [[ $named =~ $b ]] ; then
-			return 10			
-		fi
-	done
+	group=( $(pacman -Sgq ${named[@]}) )
+	if (( "${#group}" )); then
+		return 10
+	fi
 		
-	unset named b
+	unset named b group
 }
 
 install_package(){
