@@ -29,7 +29,7 @@ sourcing(){
 HOME_PATH="/var/lib/obarun/obarun-install"
 GENERAL_DIR="$HOME_PATH/config"
 SOURCES_FUNC="/tmp/obarun-install-tmp"
-
+LOCALTIME="/usr/share/zoneinfo/right"
 
 ## 		Clean on exit
 
@@ -833,15 +833,15 @@ define_locale(){
 
 define_localtime(){
 
-	zone_list=$(ls -d --group-directories-first /usr/share/zoneinfo/* | awk -F "/usr/share/zoneinfo/" '{ print $2 }' | uniq)
+	zone_list=$(ls -d --group-directories-first ${LOCALTIME}/* | awk -F "${LOCALTIME}/" '{ print $2 }' | uniq)
 	zone_list+=" Exit"
 	select _zone in ${zone_list[@]}; do
 		case $_zone in 
 			Exit)customizeChroot_menu
 			break;;
 			*)if check_elements "$_zone" ${zone_list[@]}; then
-				if [[  -d "/usr/share/zoneinfo/$_zone" ]]; then
-					sub_zone_list=$(ls /usr/share/zoneinfo/$_zone/* | awk -F "/usr/share/zoneinfo/$_zone/" '{ print $2 }') 
+				if [[  -d "${LOCALTIME}/$_zone" ]]; then
+					sub_zone_list=$(ls ${LOCALTIME}/$_zone/* | awk -F "${LOCALTIME}/$_zone/" '{ print $2 }') 
 					sub_zone_list+=" Exit"
 					select _subzone in ${sub_zone_list[@]}; do
 						case $_subzone in
@@ -1018,14 +1018,14 @@ config_locale(){
 config_localetime(){
 	
 	if [[ -n "$SUBZONE" ]]; then
-		ln -sf /usr/share/zoneinfo/$ZONE/$SUBZONE /etc/localtime
+		ln -sf ${LOCALTIME}/$ZONE/$SUBZONE /etc/localtime
 		if [[ -h /etc/s6.conf ]]; then
 			sed -i "s/TZ=.*$/TZ=$ZONE\/$SUBZONE/g" /etc/s6/s6.conf
 		else
 			sed -i "s/TIMEZONE=\".*$/TIMEZONE=\"$ZONE\/$SUBZONE\"/g" /etc/rc.conf
 		fi		
 	else
-		ln -sf /usr/share/zoneinfo/$ZONE /etc/localtime
+		ln -sf ${LOCALTIME}/$ZONE /etc/localtime
 		if [[ -h /etc/s6.conf ]]; then
 			sed -i "s/TZ=.*$/TZ=$ZONE/g" /etc/s6/s6.conf
 		else
