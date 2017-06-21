@@ -553,11 +553,9 @@ sync_data(){
 	
 	echo_display " Copying database on $NEWROOT/var/lib/pacman/sync/"	
 	mkdir -p -m0755 "$NEWROOT/var/lib/pacman/sync/"
-<<<<<<< HEAD
+
 	cp /var/lib/pacman/sync/*.{db,sig} "$NEWROOT/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.db doesn't exit on host" "clean_install"
-=======
 	cp /var/lib/pacman/sync/*.{db,sig} "$NEWROOT/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.{db,sig} doesn't exit on host" "clean_install"
->>>>>>> dev
 		
 }
 
