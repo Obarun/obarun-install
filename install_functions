@@ -553,7 +553,7 @@ sync_data(){
 	
 	echo_display " Copying database on $NEWROOT/var/lib/pacman/sync/"	
 	mkdir -p -m0755 "$NEWROOT/var/lib/pacman/sync/"
-	cp /var/lib/pacman/sync/*.{db,sig} "$NEWROOT/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.db doesn't exit on host" "clean_install"
+	cp /var/lib/pacman/sync/*.{db,sig} "$NEWROOT/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.{db,sig} doesn't exit on host" "clean_install"
 		
 }
 
@@ -760,7 +760,7 @@ while [[ "$step" !=  11 ]]; do
 	echo_info_menu "                   Expert mode"
 	echo_info_menu "**************************************************************"
 	echo_bold ""
-	echo_bold " 8  -  Edit the booting configuration file"
+	echo_bold " 8  -  Edit s6.conf file"
 	echo_bold " 9  -  Browse with Midnight Commander"
 	echo_bold " 10 -  Delete custo_once files"
 	echo_bold ""
@@ -779,7 +779,7 @@ while [[ "$step" !=  11 ]]; do
 			6)	define_xkeymap;;
 			7)	echo_display " Continue installation"
 				break;;
-			8)	edit_rc_conf;;
+			8)	edit_s6_conf;;
 			9)	mc /;;
 			10)	clean_once_file "rm" "/root/tmp/obarun-install";;
 			11)	exit;;
@@ -986,11 +986,11 @@ config_hostname(){
 	if [[ "$HOSTNAME" != "" ]]; then
 		sed -i 's/ .*$//' /etc/hosts
 	fi
-	if [[ -h /etc/s6.conf ]]; then
+	#if [[ -h /etc/s6.conf ]]; then
 		sed -i "s/HOSTNAME=.*$/HOSTNAME=$HOSTNAME/g" /etc/s6/s6.conf
-	else
-		sed -i "s/HOSTNAME=\".*$/HOSTNAME=\"$HOSTNAME\"/g" /etc/rc.conf
-	fi
+	#else
+	#	sed -i "s/HOSTNAME=\".*$/HOSTNAME=\"$HOSTNAME\"/g" /etc/rc.conf
+	#fi
 	
 	echo "$HOSTNAME" > /etc/hostname
 	sed -i '/127.0.0.1/s/$/ '$HOSTNAME'/' /etc/hosts
@@ -1019,18 +1019,18 @@ config_localetime(){
 	
 	if [[ -n "$SUBZONE" ]]; then
 		ln -sf ${LOCALTIME}/$ZONE/$SUBZONE /etc/localtime
-		if [[ -h /etc/s6.conf ]]; then
+		#if [[ -h /etc/s6.conf ]]; then
 			sed -i "s/TZ=.*$/TZ=$ZONE\/$SUBZONE/g" /etc/s6/s6.conf
-		else
-			sed -i "s/TIMEZONE=\".*$/TIMEZONE=\"$ZONE\/$SUBZONE\"/g" /etc/rc.conf
-		fi		
+		#else
+		#	sed -i "s/TIMEZONE=\".*$/TIMEZONE=\"$ZONE\/$SUBZONE\"/g" /etc/rc.conf
+		#fi		
 	else
 		ln -sf ${LOCALTIME}/$ZONE /etc/localtime
-		if [[ -h /etc/s6.conf ]]; then
+		#if [[ -h /etc/s6.conf ]]; then
 			sed -i "s/TZ=.*$/TZ=$ZONE/g" /etc/s6/s6.conf
-		else
-			sed -i "s/TIMEZONE=\".*$/TIMEZONE=\"$ZONE\"/g" /etc/rc.conf
-		fi
+		#else
+		#	sed -i "s/TIMEZONE=\".*$/TIMEZONE=\"$ZONE\"/g" /etc/rc.conf
+		#fi
 	fi
 	
 	echo_valid " Localetime was configured successfully"
@@ -1056,11 +1056,11 @@ config_user(){
 
 config_keymap(){
 	
-	if [[ -h /etc/s6.conf ]]; then
+	#if [[ -h /etc/s6.conf ]]; then
 		sed -i "s,KEYMAP=.*$,KEYMAP=$KEYMAP,g" /etc/s6/s6.conf
-	else
-		sed -i "s,KEYMAP=\".*$,KEYMAP=\"$KEYMAP\",g" /etc/rc.conf
-	fi
+	#else
+	#	sed -i "s,KEYMAP=\".*$,KEYMAP=\"$KEYMAP\",g" /etc/rc.conf
+	#fi
 	
 	echo_valid " Console keymap was configured successfully"
 }
@@ -1084,13 +1084,13 @@ config_xkeymap(){
 
 ##		Edit rc.conf
 
-edit_rc_conf(){
+edit_s6_conf(){
 	
-	if [[ -h /etc/s6.conf ]]; then
+	#if [[ -h /etc/s6.conf ]]; then
 		edit_file "s6.conf" "/etc/s6" "$EDITOR"
-	else
-		edit_file "rc.conf" "/etc/" "$EDITOR"
-	fi
+	#else
+	#	edit_file "rc.conf" "/etc/" "$EDITOR"
+	#fi
 	
 }
 
