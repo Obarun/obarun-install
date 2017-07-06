@@ -16,7 +16,7 @@ sourcing(){
 	
 	local list
 	
-	for list in /usr/lib/obarun/{common_functions,install_functions} /etc/obarun/install.conf; do
+	for list in /etc/obarun/install.conf /usr/lib/obarun/{common_functions,install_functions}; do
 		if [[ -f "${list}" ]]; then
 			source "${list}"
 		else
@@ -51,7 +51,7 @@ main_update(){
 
 	if (( ! $? )); then
 		pac_update "obarun-install" "/var/lib/obarun/obarun-install" "$GIT_ADDR" || die " Impossible to update" "clean_install"
-		source /usr/lib/obarun/install_functions
+		sourcing
 	else
 		echo_retry " WARNING : Some functionalities will cannot works properly"
 		echo_info " Press enter to continue"

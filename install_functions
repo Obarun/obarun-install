@@ -5,25 +5,6 @@
 # can do whatever you want with this stuff. If we meet some day, and you think
 # this stuff is worth it, you can buy me a beer in return.   Eric Vidal
 
-# functions file for obarun-install package
-
-sourcing(){
-	
-	local list
-	
-	for list in /usr/lib/obarun/common_functions /etc/obarun/install.conf; do
-		if [[ -f "${list}" ]]; then
-			source "${list}"
-		else
-			echo_error " Missing file : ${list}"
-			exit	
-		fi
-	done
-	
-	unset list
-}
-#sourcing
-
 ## 		Some global variables needed
 
 HOME_PATH="/var/lib/obarun/obarun-install"
