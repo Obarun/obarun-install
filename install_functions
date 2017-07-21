@@ -975,7 +975,7 @@ config_hostname(){
 	#	sed -i "s/HOSTNAME=\".*$/HOSTNAME=\"$HOSTNAME\"/g" /etc/rc.conf
 	#fi
 	
-	echo "$HOSTNAME" > /etc/hostname
+	#echo "$HOSTNAME" > /etc/hostname
 	sed -i '/127.0.0.1/s/$/ '$HOSTNAME'/' /etc/hosts
 	sed -i '/::1/s/$/ '$HOSTNAME'/' /etc/hosts
 	
