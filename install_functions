@@ -1050,16 +1050,9 @@ config_keymap(){
 
 config_xkeymap(){
 	
-	if [[ -e "/home/$NEWUSER/.config/openbox/autostart" ]]; then
-		echo_notvalid " Define keymap for X server in /home/$NEWUSER/.config/openbox/autostart"
-		sed -i 's/#setxkbmap.*$/setxkbmap\ '$XKEYMAP'\ \&/g' /home/$NEWUSER/.config/openbox/autostart
-		sed -i 's/setxkbmap.*$/setxkbmap\ '$XKEYMAP'\ \&/g' /home/$NEWUSER/.config/openbox/autostart
-	fi
-	
-	if [[ -e "/root/.config/openbox/autostart" ]]; then
-		echo_notvalid " Define keymap for X server in /root/.config/openbox/autostart"
-		sed -i 's/#setxkbmap.*$/setxkbmap\ '$XKEYMAP'\ \&/g' /root/.config/openbox/autostart
-		sed -i 's/setxkbmap.*$/setxkbmap\ '$XKEYMAP'\ \&/g' /root/.config/openbox/autostart
+	if [[ -e "/etc/X11/xorg.conf.d/00-keyboard.conf" ]]; then
+		echo_notvalid " Define keymap for X server in /etc/X11/xorg.conf.d/00-keyboard.conf"
+		sed -i 's:Option "XkbLayout"\ .*$:Option "XkbLayout" "'$XKEYMAP'":g' /etc/X11/xorg.conf.d/00-keyboard.conf
 	fi
 	
 	echo_valid " Desktop xkeymap was configured successfully"
