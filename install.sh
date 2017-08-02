@@ -11,13 +11,6 @@
 # can do whatever you want with this stuff. If we meet some day, and you think
 # this stuff is worth it, you can buy me a beer in return.   Eric Vidal
 
-## 		Some global variables needed
-
-HOME_PATH="/var/lib/obarun/obarun-install"
-GENERAL_DIR="$HOME_PATH/config"
-SOURCES_FUNC="/tmp/obarun-install-tmp"
-LOCALTIME="/usr/share/zoneinfo/right"
-CONFIG="/etc/obarun/install.conf"
 LIBRARY=${LIBRARY:-'/usr/lib/obarun'}
 sourcing(){
 	
@@ -30,6 +23,15 @@ sourcing(){
 	unset list
 }
 sourcing
+
+## 		Some global variables needed
+
+HOME_PATH="/var/lib/obarun/obarun-install"
+GENERAL_DIR="$HOME_PATH/config"
+SOURCES_FUNC="/tmp/obarun-install-tmp"
+LOCALTIME="/usr/share/zoneinfo/right"
+CONFIG="/etc/obarun/install.conf"
+
 ## 		Main menu
 
 main_menu(){
