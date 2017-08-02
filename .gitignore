@@ -1,5 +1,6 @@
 call_test
 check_functions
+create_disk
 src/
 pkg/
 *.tar.*
