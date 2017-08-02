@@ -82,7 +82,7 @@ while [[ "$step" !=  12 ]]; do
 			5)	select_list;;
 			6)	choose_rootdir;; # Never comment this options
 			7)	install_system;;
-			8)	enter_chroot;;
+			8)	customize_newroot;;
 			9)	edit_customize_chroot;;
 			10) call_shell;;
 			11)	mc_newroot;;
@@ -171,7 +171,6 @@ install_system(){
 		
 	create_dir
 	mount_umount "$NEWROOT" "mount"
-	#user_add "usertmp" || die " Impossible to create user usertmp" "clean_install"
 	copy_file
 	check_gpg "$GPG_DIR"
 	sync_data
@@ -181,3 +180,28 @@ install_system(){
 	define_root
 }
 
+customize_newroot(){
+	
+	# make sure the necessary is present before enter on chroot
+	check_mountpoint "$NEWROOT"
+	if (( $? )); then
+		out_notvalid "This is not a valid mountpoint"
+		out_notvalid "You need to mount a device on $NEWROOT or choose another directory"
+		(sleep 4) && out_info "Returning to the main_menu" && (sleep 1) && main_menu
+	fi
+		
+	create_dir
+	mount_umount "$NEWROOT" "mount"
+	copy_rootfs
+	define_root
+	customizeChroot_menu
+	if (( $? )); then
+		return
+	else
+		config_custofile
+		copy_file
+		out_action "Chroot on ${NEWROOT}"	
+		chroot "$NEWROOT" "$SOURCES_FUNC"/customizeChroot || die " Failed to enter on ${NEWROOT} or Failed to execute functions customizeChroot" "clean_install"
+		custo_once config_syslinux
+	fi
+}
