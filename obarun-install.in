@@ -1,4 +1,10 @@
 #!/usr/bin/bash
+#
+# Authors:
+# Eric Vidal <eric@obarun.org>
+#
+# Copyright (C) 2015-2017 Eric Vidal <eric@obarun.org>
+#
 # This script is under license BEER-WARE
 # "THE BEER-WARE LICENSE" (Revision 42):
 # <eric@obarun.org> wrote this file.  As long as you retain this notice you
@@ -16,11 +22,11 @@ sourcing(){
 	
 	local list
 	
-	for list in /etc/obarun/install.conf /usr/lib/obarun/{common_functions,install_functions}; do
+	for list in /etc/obarun/install.conf /usr/lib/obarun/{util.sh,install.sh} /usr/lib/obarun/install/*; do
 		if [[ -f "${list}" ]]; then
 			source "${list}"
 		else
-			echo_error " Missing file : ${list}"
+			out_error "Missing file : ${list}"
 			exit	
 		fi
 	done
@@ -38,14 +44,14 @@ trap "clean_install" ERR QUIT KILL STOP INT TERM
 
 ##		Must be root user 
 
-(( EUID == 0 )) || die " ${bred}You must be run this script with root privileges" "clean_install"
+(( EUID == 0 )) || die "You must be run this script with root privileges" "clean_install"
 
 ##		Let's go
 
 ##		Update package or not
 
 main_update(){
-	echo_display " Do you want to update obarun-install package? [y|n]"
+	out_action "Do you want to update obarun-install package? [y|n]"
 
 	reply_answer
 
@@ -53,20 +59,20 @@ main_update(){
 		pac_update "obarun-install" "/var/lib/obarun/obarun-install" "$GIT_ADDR" || die " Impossible to update" "clean_install"
 		sourcing
 	else
-		echo_retry " WARNING : Some functionalities will cannot works properly"
-		echo_info " Press enter to continue"
+		out_notvalid "WARNING : Some functionalities will cannot works properly"
+		out_info "Press enter to continue"
 		read enter
 	fi
 	
-	echo_display " Do you want to update obarun-install-themes package? [y|n]"
+	out_action "Do you want to update obarun-install-themes package? [y|n]"
 	
 	reply_answer
 
 	if (( ! $? )); then
 		pac_update "obarun-install-themes" "/var/lib/obarun/obarun-install-themes" "https://github.com/Obarun/obarun-install-themes.git" || die " Impossible to update" "clean_install"
 	else
-		echo_retry " WARNING : Some configurations can be out of date"
-		echo_info " Press enter to continue"
+		out_notvalid "WARNING : Some configurations can be out of date"
+		out_info "Press enter to continue"
 		read enter
 	fi
 }
