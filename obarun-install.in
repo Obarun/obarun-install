@@ -22,7 +22,7 @@ sourcing(){
 	
 	local list
 	
-	for list in /etc/obarun/install.conf /usr/lib/obarun/{util.sh,install.sh} /usr/lib/obarun/install/*; do
+	for list in /etc/obarun/install.conf /usr/lib/obarun/{util.sh,install.sh}; do
 		if [[ -f "${list}" ]]; then
 			source "${list}"
 		else

@@ -18,7 +18,18 @@ GENERAL_DIR="$HOME_PATH/config"
 SOURCES_FUNC="/tmp/obarun-install-tmp"
 LOCALTIME="/usr/share/zoneinfo/right"
 CONFIG="/etc/obarun/install.conf"
-
+LIBRARY=${LIBRARY:-'/usr/lib/obarun'}
+sourcing(){
+	
+	local list
+	
+	for list in ${LIBRARY}/install/*; do
+		source "${list}"
+	done
+	
+	unset list
+}
+sourcing
 ## 		Main menu
 
 main_menu(){
