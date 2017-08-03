@@ -27,7 +27,11 @@ package() {
 	cd "$srcdir/$pkgname"
 	
 	install -Dm 0755 "obarun-install.in" "$pkgdir/usr/bin/obarun-install"
-	install -Dm 0644 "install_functions" "$pkgdir/usr/lib/obarun/install_functions"
+	install -Dm 0755 "install.sh" "$pkgdir/usr/lib/obarun/install.sh"
+	install -dm 0755 "$pkgdir/usr/lib/obarun/install/"
+	for file in install/{aur.sh,bootloader.sh,choose.sh,config.sh,define.sh,pac.sh,util.sh};do
+		install -Dm 0755 "${file}" "$pkgdir/usr/lib/obarun/install/"
+	done
 	install -Dm 0644 "install.conf" "$pkgdir/etc/obarun/install.conf"
 	install -dm 0755 "$pkgdir/usr/share/licenses/obarun-install/"
 	install -Dm 0644 "LICENSE" "$pkgdir/usr/share/licenses/obarun-install/LICENSE"
