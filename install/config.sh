@@ -114,7 +114,7 @@ config_pac_sync(){
 	if [[ ! -d "${NEWROOT}"/var/lib/pacman/sync ]]; then 
 		pacman -r "${NEWROOT}" -Syy
 	else
-		pacman -r "${NEWROOT}" pacman -Sy
+		pacman -r "${NEWROOT}" -Sy
 	fi
 }
 config_resolv(){
