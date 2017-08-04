@@ -191,6 +191,8 @@ install_system(){
 	gen_fstab "$NEWROOT"
 	copy_rootfs
 	define_root
+	custo_once config_syslinux
+	out_action "Base system installed successfully"
 }
 
 customize_newroot(){
@@ -215,6 +217,5 @@ customize_newroot(){
 		copy_file
 		out_action "Chroot on ${NEWROOT}"	
 		chroot "$NEWROOT" "$SOURCES_FUNC"/customizeChroot || die " Failed to enter on ${NEWROOT} or Failed to execute functions customizeChroot" "clean_install"
-		custo_once config_syslinux
 	fi
 }

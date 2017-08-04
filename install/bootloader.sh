@@ -69,11 +69,13 @@ syslinux_menu(){
 				4) 	options="-a"
 					break;;
 				5) 	out_info "Exiting"
-					break;;
+					return 1;;
 				*) 	out_notvalid "Invalid number, please retry:"
 					out_action "Press enter to return to syslinux configuration menu"
 					read enter;;
-			esac	
+			esac
+			out_info "Press enter to return to the main menu"
+			read enter	
 	done
 	
 	syslinux_install "$options"
