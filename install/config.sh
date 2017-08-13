@@ -64,7 +64,7 @@ config_localetime(){
 		sed -i "s/TZ=.*$/TZ=$ZONE\/$SUBZONE/g" "${NEWROOT}"/etc/s6/s6.conf
 	else
 		chroot "${NEWROOT}" ln -sf ${LOCALTIME}/$ZONE /etc/localtime
-		sed -i "s/TZ=.*$/TZ=$ZONE/g" /etc/s6/s6.conf
+		sed -i "s/TZ=.*$/TZ=$ZONE/g" "${NEWROOT}"/etc/s6/s6.conf
 	fi
 	
 	out_valid "Localetime was configured successfully"
