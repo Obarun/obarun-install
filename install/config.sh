@@ -24,6 +24,7 @@ config_custofile(){
 	custo_once config_pac_sync
 	custo_once config_pac
 	custo_once config_gpg 
+	custo_once config_pacopts
 }
 
 config_hostname(){
@@ -148,6 +149,10 @@ config_gpg(){
 		out_valid "Gpg key exist, Refresh it..."
 		pacman-key -u 
 	fi
+}
+config_pacopts(){
+	out_action "Launch pacopts applysys"
+	chroot "${NEWROOT}" pacopts applysys "$(ls /usr/lib/sysusers.d/)"
 }
 config_syslinux(){
 	out_action "Do you want to install ${green}[syslinux]${reset}${bold} bootloader [y|n] :"
