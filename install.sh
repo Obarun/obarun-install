@@ -53,7 +53,7 @@ while [[ "$step" !=  12 ]]; do
 	out_menu_list "	- Network is functional"
 	out_menu_list "	- A valid mirror appears in /etc/pacman.d/mirrorlist"
 	out_menu_list "	- Defaults options are specified in brackets"
-	out_void ""
+	out_void 
 	out_menu_title "***************************************************************************************"
 	out_menu_title "                            Configuration"
 	out_menu_title "***************************************************************************************"
