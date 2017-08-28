@@ -35,7 +35,7 @@ config_hostname(){
 	
 	sed -i "s/HOSTNAME=.*$/HOSTNAME=$HOSTNAME/g" "${NEWROOT}"/etc/s6/s6.conf
 		
-	#echo "$HOSTNAME" > /etc/hostname
+	echo "$HOSTNAME" > "${NEWROOT}"/etc/hostname
 	sed -i '/127.0.0.1/s/$/ '$HOSTNAME'/' "${NEWROOT}"/etc/hosts
 	sed -i '/::1/s/$/ '$HOSTNAME'/' "${NEWROOT}"/etc/hosts
 	
