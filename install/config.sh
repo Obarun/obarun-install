@@ -152,7 +152,7 @@ config_gpg(){
 }
 config_pacopts(){
 	out_action "Launch pacopts applysys"
-	chroot "${NEWROOT}" pacopts applysys "$(ls /usr/lib/sysusers.d/)"
+	chroot "${NEWROOT}" pacopts applysys "$(ls ${NEWROOT}/usr/lib/sysusers.d/)"
 }
 config_syslinux(){
 	out_action "Do you want to install ${green}[syslinux]${reset}${bold} bootloader [y|n] :"
