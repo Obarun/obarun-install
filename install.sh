@@ -77,7 +77,7 @@ while [[ "$step" !=  13 ]]; do
 	out_menu_list " 9  -  Edit the script customizeChroot"
 	out_menu_list " 10 -  Launch a shell on ${green}[$NEWROOT]${reset}${bold} directory"
 	out_menu_list " 11 -  Browse ${green}[$NEWROOT]${reset}${bold} with Midnight Commander"
-	out_menu_list " 12 -  Use rankmirrors${green}[Yes]"
+	out_menu_list " 12 -  Use rankmirrors${green}[$RANKMIRRORS]"
 	out_void 
 	out_void 
 	out_menu_list " ${red}13 -  Exit installation script"
