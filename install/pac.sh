@@ -141,7 +141,7 @@ sync_data(){
 		out_info "Copy /etc/pacman.d/mirrorlist to /etc/pacman.d/mirrorlist.backup"
 		cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
 		sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
-		out_action "Check fastest local mirrors..."
+		out_action "Check fastest local mirrors, this may take time..."
 		rankmirrors -n 20 /etc/pacman.d/mirrorlist
 	fi
 	out_action "Synchronize database"
