@@ -190,7 +190,8 @@ install_system(){
 	gen_fstab "$NEWROOT"
 	copy_rootfs
 	define_root
-	custo_once config_syslinux
+	config_syslinux
+	config_virtualbox
 	out_action "Base system installed successfully"
 }
 
