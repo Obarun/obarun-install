@@ -35,7 +35,7 @@ main_menu(){
 
 local step=100 enter
 
-while [[ "$step" !=  12 ]]; do
+while [[ "$step" !=  13 ]]; do
 	# reload the source, this is allow to see the change made on the menu
 	source "${CONFIG}"
 	clear
@@ -77,9 +77,10 @@ while [[ "$step" !=  12 ]]; do
 	out_menu_list " 9  -  Edit the script customizeChroot"
 	out_menu_list " 10 -  Launch a shell on ${green}[$NEWROOT]${reset}${bold} directory"
 	out_menu_list " 11 -  Browse ${green}[$NEWROOT]${reset}${bold} with Midnight Commander"
+	out_menu_list " 12 -  Use rankmirrors${green}[$RANKMIRRORS]"
 	out_void 
 	out_void 
-	out_menu_list " ${red}12 -  Exit installation script"
+	out_menu_list " ${red}13 -  Exit installation script"
 	out_void 
 	out_void 
 	out_menu_list "Enter your choice :";read  step
@@ -96,7 +97,8 @@ while [[ "$step" !=  12 ]]; do
 			9)	edit_customize_chroot;;
 			10) call_shell;;
 			11)	mc_newroot;;
-			12) out_action "Exiting"
+			12) choose_rankmirrors;;
+			13) out_action "Exiting"
 				clean_install;;
 			*) out_notvalid "Invalid number, Please retry: "
 		esac

@@ -112,3 +112,18 @@ choose_rootdir(){
 	unset _directory
 }
 
+choose_rankmirrors(){
+	
+	out_action "Enter y for yes or n for no"
+	reply_answer
+	
+	if (( ! $? )); then
+		out_valid "Rankmirrors will be used"
+		sed -i "s,RANKMIRRORS=.*$,RANKMIRRORS=\"yes\",g" /etc/obarun/install.conf
+	else
+		out_valid "Rankmirrors will not used"
+		sed -i "s,RANKMIRRORS=.*$,RANKMIRRORS=\"no\",g" /etc/obarun/install.conf
+	fi
+	
+}
+	

@@ -94,12 +94,11 @@ config_keymap(){
 
 config_xkeymap(){
 	
-	if [[ -e "/etc/X11/xorg.conf.d/00-keyboard.conf" ]]; then
+	if [[ -e "${NEWROOT}/etc/X11/xorg.conf.d/00-keyboard.conf" ]]; then
 		out_action "Define keymap for X server in /etc/X11/xorg.conf.d/00-keyboard.conf"
 		sed -i 's:Option "XkbLayout"\ .*$:Option "XkbLayout" "'$XKEYMAP'":g' "${NEWROOT}"/etc/X11/xorg.conf.d/00-keyboard.conf
+		out_valid "Desktop xkeymap was configured successfully"
 	fi
-	
-	out_valid "Desktop xkeymap was configured successfully"
 }
 
 config_mirrorlist(){
