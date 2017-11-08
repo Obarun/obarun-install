@@ -119,10 +119,10 @@ choose_rankmirrors(){
 	
 	if (( ! $? )); then
 		out_valid "Rankmirrors will be used"
-		sed -i "s,RANKMIRRORS=.*$,RANKMIRRORS=yes,g" /etc/obarun/install.conf
+		sed -i "s,RANKMIRRORS=.*$,RANKMIRRORS=\"yes\",g" /etc/obarun/install.conf
 	else
 		out_valid "Rankmirrors will not used"
-		sed -i "s,RANKMIRRORS=.*$,RANKMIRRORS=no,g" /etc/obarun/install.conf
+		sed -i "s,RANKMIRRORS=.*$,RANKMIRRORS=\"no\",g" /etc/obarun/install.conf
 	fi
 	
 }
