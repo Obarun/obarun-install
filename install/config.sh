@@ -151,9 +151,18 @@ config_pacopts(){
 	chroot "${NEWROOT}" pacopts applysys "$(ls ${NEWROOT}/usr/lib/sysusers.d/)"
 }
 config_syslinux(){
-	out_action "Do you want to install ${green}[syslinux]${reset}${bold} bootloader [y|n] :"
+	out_action "Do you want to install ${green}[syslinux]${reset}${bold} bootloader [y|n]? :"
 	reply_answer 
 	if (( ! $? )); then
 		syslinux_menu
+	fi
+}
+config_virtualbox(){
+	if [[ -n $(grep "Virtualbox" /sys/class/dmi/id/product_name) ]]; then
+		out_action "This is a VirtualBox machine. Do you want to install virtualbox guest modules [y|n]? :"
+		reply_answer
+		if (( ! $? )); then
+			pacman -r "$NEWROOT" -S virtualbox-guest-modules-arch virtualbox-guest-utils --config "$GENERAL_DIR/$CONFIG_DIR/pacman.conf" --cachedir "$CACHE_DIR" --noconfirm || die " Failed to install virtualbox packages" "clean_install"
+		fi
 	fi
 }
