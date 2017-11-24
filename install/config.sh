@@ -16,10 +16,9 @@ config_custofile(){
 	custo_once config_user
 	custo_once config_keymap
 	custo_once config_xkeymap
-	custo_once config_resolv
 	custo_once config_mirrorlist
 	custo_once config_pac_sync
-	custo_once config_pac
+	#custo_once config_pac
 	custo_once config_gpg 
 	custo_once config_pacopts
 }
@@ -102,8 +101,8 @@ config_xkeymap(){
 }
 
 config_mirrorlist(){
-	out_action "Uncomment server in mirrorlist"
-	sed -i "s/#Server/Server/g" "${NEWROOT}"/etc/pacman.d/mirrorlist
+	out_action "Copy mirroirlist from the host"
+	cp -af /etc/pacman.d/mirrorlist "${NEWROOT}"/etc/pacman.d/mirrorlist
 }
 
 config_pac_sync(){
@@ -114,13 +113,7 @@ config_pac_sync(){
 		pacman -r "${NEWROOT}" -Sy
 	fi
 }
-config_resolv(){
-	
-	out_action "Define resolv.conf"
-	if [[ -e "${NEWROOT}"/etc/resolv.conf.pacorig ]]; then 
-		mv "${NEWROOT}"/etc/resolv.conf.pacorig "${NEWROOT}"/etc/resolv.conf
-	fi
-}
+
 config_pac(){
 	out_action "Change pacman.conf configuration"
 	sed -i "s:SigLevel = Never.*#:SigLevel = Required DatabaseOptional:" "${NEWROOT}"/etc/pacman.conf
