@@ -19,7 +19,7 @@ config_custofile(){
 	custo_once config_mirrorlist
 	custo_once config_pac_sync
 	#custo_once config_pac
-	custo_once config_gpg 
+	#custo_once config_gpg 
 	custo_once config_pacopts
 }
 
