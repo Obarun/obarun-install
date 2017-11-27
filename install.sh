@@ -190,6 +190,7 @@ install_system(){
 	gen_fstab "$NEWROOT"
 	copy_rootfs
 	config_gpg
+	config_mirrorlist
 	define_root
 	config_virtualbox
 	config_syslinux

@@ -16,10 +16,7 @@ config_custofile(){
 	custo_once config_user
 	custo_once config_keymap
 	custo_once config_xkeymap
-	custo_once config_mirrorlist
 	custo_once config_pac_sync
-	#custo_once config_pac
-	#custo_once config_gpg 
 	custo_once config_pacopts
 }
 
@@ -114,11 +111,6 @@ config_pac_sync(){
 	fi
 }
 
-config_pac(){
-	out_action "Change pacman.conf configuration"
-	sed -i "s:SigLevel = Never.*#:SigLevel = Required DatabaseOptional:" "${NEWROOT}"/etc/pacman.conf
-	sed -i "s:#SigLevel = PackageRequired:SigLevel = PackageRequired:" "${NEWROOT}"/etc/pacman.conf
-}
 config_gpg(){
 	
 	out_action "Check if gpg key exist"	
