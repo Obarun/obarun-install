@@ -138,7 +138,7 @@ install_package(){
 sync_data(){
 	
 	if [[ "${RANKMIRRORS}" == "yes" ]]; then
-		mirrolist
+		mirrorlist
 	fi
 	
 	out_action "Synchronize database"
