@@ -151,7 +151,7 @@ config_syslinux(){
 	fi
 }
 config_virtualbox(){
-	if [[ -n $(grep "Virtualbox" /sys/class/dmi/id/product_name) ]]; then
+	if [[ -n $(grep "VirtualBox" /sys/class/dmi/id/product_name) ]]; then
 		out_action "This is a VirtualBox machine. Do you want to install virtualbox guest modules [y|n]? :"
 		reply_answer
 		if (( ! $? )); then
