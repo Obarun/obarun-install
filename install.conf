@@ -1,4 +1,4 @@
-# Copyright (c) 2015-2017 Eric Vidal <eric@obarun.org>
+# Copyright (c) 2015-2018 Eric Vidal <eric@obarun.org>
 # All rights reserved.
 # 
 # This file is part of Obarun. It is subject to the license terms in
