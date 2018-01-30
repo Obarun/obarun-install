@@ -38,7 +38,7 @@ define_locale(){
 			*) 	list_locale+=( "${list_##*#}" ) 
 				;;
 		esac
-	done < locale.gen
+	done < "${NEWROOT}"/etc/locale.gen
 	list_locale+=( "Exit" )
 	
 	out_action "Define your main local"
