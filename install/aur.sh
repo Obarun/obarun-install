@@ -82,9 +82,9 @@ aur_build(){
 	work_dir="${2}"
 	
 	cd "${work_dir}"
-	
+	echo "%wheel ALL=(ALL) NOPASSWD: ALL #obarun-libs" >> /etc/sudoers
 	su "${OWNER}" -c "makepkg -Cs --noconfirm --nosign"
-	
+	sed -i "s;%wheel ALL=(ALL) NOPASSWD: ALL #obarun-libs;;" /etc/sudoers
 	cd "${_oldpwd}"
 	
 	unset named work_dir _oldpwd
