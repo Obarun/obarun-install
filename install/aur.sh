@@ -83,7 +83,7 @@ aur_build(){
 	
 	cd "${work_dir}"
 	
-	su "${OWNER}" -c "makepkg -Cs --noconfirm --needed --nosign"
+	su "${OWNER}" -c "makepkg -Cs --noconfirm --nosign"
 	
 	cd "${_oldpwd}"
 	
