@@ -1,0 +1,22 @@
+#!/bin/bash
+
+fls(){
+	local dir=$1
+	current=$dir
+	#current=${current##*/}
+	echo current::$current
+	zone=$(find $dir -maxdepth 1 -mindepth 1|awk -F"$dir/" '{print $2}'|sort|fzf --prompt="Arrow up/down key to navigate - Enter to select" --reverse -s --height 50% --border)
+	
+	if [[ -d $dir/$zone ]];then
+		fls $dir/$zone
+	fi
+	echo zone::$zone
+	echo current::$current
+}
+flsk(){
+	
+	#key_list=$(echo -e "af\n""al\n""am"|fzf --prompt="Arrow up/down key to navigate - Enter to select" --reverse -s --height 50% --border)
+	list=("af\n""al\n""am\n""at\n""az\n""ba\n""bd\n""be\n""bg\n""br\n""bt\n""bw\n""by\n""ca\n""cd\n""ch\n""cm\n""cn\n""cz\n""de\n""dk\n""ee\n""es\n""et\n""eu\n""fi\n""fo\n""fr\n""gb\n""ge\n""gh\n""gn\n""gr\n""hr\n""hu\n""ie\n""il\n""in\n""iq\n""ir\n""is\n""it\n""jp\n""ke\n""kg\n""kh\n""kr\n""kz\n""la\n""lk\n""lt\n""lv\n""ma\n""md\n""me\n""mk\n""ml\n""mm\n""mn\n""mt\n""mv\n""ng\n""nl\n""no\n""np\n""pc\n""ph\n""pk\n""pl\n""pt\n""ro\n""rs\n""ru\n""se\n""si\n""sk\n""sn\n""sy\n""tg\n""th\n""tj\n""tm\n""tr\n""tw\n""tz\n""ua\n""us\n""uz\n""vn\n""za")
+	key_list=$(echo -e $list | fzf --prompt="Arrow up/down key to navigate - Enter to select" --reverse -s --height 50% --border)
+	echo key_list::$key_list
+}

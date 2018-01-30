@@ -28,22 +28,50 @@ define_hostname(){
 
 define_locale(){
 	
-	local enter _locale
+	local enter _locale list_ 
+	local -a list_locale
 	
-	out_action "Define your locale by uncomment desired line, only one line is allowed"
-	out_info "Press enter to continue"
+	while read -r list_;do
+		case $list_ in
+			\#' '*) continue ;;
+			\#"") continue ;;
+			*) 	list_locale+=( "${list_##*#}" ) 
+				;;
+		esac
+	done < locale.gen
+	list_locale+=( "Exit" )
 	
-	read enter
-	
-	"$EDITOR" "${NEWROOT}"/etc/locale.gen
-	
-	_locale=$(grep -v "#" ${NEWROOT}/etc/locale.gen | awk -F " " '{ print $1 }')
-	
-	out_valid "your locale is now : $_locale"
+	out_action "Define your main local"
+	select _locale in "${list_locale[@]}"; do
+		case "$_locale" in
+			Exit)unset _locale
+				break;;
+			*)if check_elements "$_locale" "${list_locale[@]}"; then
+				_locale="${_locale%%' '*}"
+				out_valid "Your main locale is now : ${_locale}"
+				break
+			  else 
+				out_notvalid "Invalid number, retry :"
+			  fi
+		esac
+	done
+	if [[ -z "${_locale}" ]]; then
+		out_notvalid "Locale is not set, pick en_US.UTF-8 by default"
+		_locale="en_US.UTF-8"
+	fi
+	out_action "Do you want to generate other locale?[y|n]"
+	reply_answer
+	if (( ! $? )); then
+		sed -i "s:^#${_locale}:${_locale}:g" "${NEWROOT}"/etc/locale.gen
+		out_action "Define your locale by uncomment the desired lines"
+		out_info "Press enter to continue"
+		read enter
+		"$EDITOR" "${NEWROOT}"/etc/locale.gen
+	fi
 	
 	sed -i "s,LOCALE=.*$,LOCALE=\"$_locale\",g" "${CONFIG}"
-	
-	unset enter _locale
+
+	unset enter _locale list_ list_locale
 }
 
 ##		Define localtime

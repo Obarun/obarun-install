@@ -49,6 +49,8 @@ config_locale(){
     echo LC_COLLATE=C >> "${NEWROOT}"/etc/locale.conf
 	
 	out_valid "Locale was created successfully"
+	
+	unset _locale
 }
 
 config_localetime(){
