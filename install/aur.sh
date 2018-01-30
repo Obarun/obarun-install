@@ -131,7 +131,10 @@ aur_install(){
 		out_action "Installing package ${named}"
 	
 		pacman -r "$NEWROOT" -U ${named}-*.pkg.tar.xz --config "$GENERAL_DIR/$CONFIG_DIR/pacman.conf" --cachedir "$CACHE_DIR" --noconfirm || die " Failed to install packages $named" "clean_install"
-	
+		
+		out_action "Copy all ${named}-*.pkg.tar.xz to $CACHE_DIR"
+		cp -a ${named}-*.pkg.tar.xz "$CACHE_DIR"
+		
 		cd "${_oldpwd}"
 	fi
 	
