@@ -202,9 +202,28 @@ define_user(){
 		fi
 	done
 	
-	if [[ ${#_newuser} -eq 0 ]] || [[ $_newuser =~ \ |\' ]] || [[ $_newuser =~ [^a-z0-9\ ] ]]; then
+	# firt pass, _newuser can not be :
+	#	empty  
+	#	higher than 16 character 
+	#   beginning by other character than lowercase or underscore
+	if [[ "${#_newuser}" -eq 0 ]] || [[ "${#_newuser}" -eq 17 ]] || ! [[ "${_newuser}" =~ ^[a-z]|^[_] ]]; then
 		out_notvalid "Invalid user name. Please retry :"
 		define_user
+	else
+		# second pass, invalid other choice than lowercase, underscore,dash, digit
+		# except for the last character
+		for ((c=0; c<${#_newuser}; c++));do
+			if [[ $((c+1)) == "${#_newuser}" ]]; then
+				# useradd accepted $ as last character, so allow it
+				if [[ "${_newuser:$c:1}" != @([a-z]|[_]|[-]|[0-9]|$) ]];then
+					out_notvalid "Invalid user name. Please retry :"
+					define_user
+				fi
+			elif [[ "${_newuser:$c:1}" != @([a-z]|[_]|[-]|[0-9]) ]];then
+				out_notvalid "Invalid user name. Please retry :"
+				define_user
+			fi 
+		done
 	fi
 	
 	out_valid "Name of the new account user is now : $_newuser"
