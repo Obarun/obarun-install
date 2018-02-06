@@ -1,5 +1,12 @@
 Changelog for obarun-install
 
+In 0.9.3
+--------
+	
+	- Bugs fix
+	- Allow multiple generation of locale
+	- Copy AUR builded package to cache directory
+
 In 0.9.2
 --------
 
