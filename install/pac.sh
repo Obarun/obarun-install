@@ -80,7 +80,7 @@ install_package(){
 	
 	# check installed packages
 	
-	out_action "Ckeck installed packages, this may take time..."
+	out_action "Check installed packages, this may take time..."
 	
 	list=" ${installed[@]} " #include blank  
 	while read item; do
