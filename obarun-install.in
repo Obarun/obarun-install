@@ -74,6 +74,8 @@ main_update(){
 	fi
 }
 
+warm_msg "You need to update first the glibc package on the host system e.g. : pacman -Sy glibc"
+
 if [[ "$UPDATE" == "yes" ]]; then
 	main_update
 fi
