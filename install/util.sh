@@ -258,18 +258,19 @@ warm_msg_end(){
 
 warm_msg(){
 	
-	local msg="${1}" _msg cmd
+	local -a msg=( "${@}" )
+	local _msg cmd
 	
 	warm_msg_start
-	for _msg in ${msg[@]};do
-		out_menu_title "                            ${_msg}"
+	for _msg in "${msg[@]}";do
+		out_menu_title "     ${_msg}"
 	done
 	warm_msg_end
 	
 	out_info "Press any key to continue"
-	out_info "Press q to exit"
+	out_info "Press e to exit"
 	read cmd
-	if [[ $cmd == "q" ]];then
+	if [[ $cmd == "e" ]];then
 		die "" "clean_install"
 	fi
 		
