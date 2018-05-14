@@ -222,17 +222,18 @@ unset enter
 }
 copy_airootfs(){
 	out_action "Copy files from airootfs"
-	rsync -a --progress /run/archiso/sfs/airootfs/ "${NEWROOT}"/
+	rsync -a --progress /run/archiso/sfs/airootfs/ "${NEWROOT}"/ || die "Unable to copy airootfs on ${NEWROOT}" "clean_install"
 	out_action "Remove Obarun user"
-	userdel -R "${NEWROOT}" -r obarun
+	userdel -R "${NEWROOT}" -r obarun || die "Unable to delete obarun user" "clean_install"
 	out_action "Remove root user"
-	userdel -R "${NEWROOT}" -r root
+	userdel -R "${NEWROOT}" -r root || die "Unable to delete root user" "clean_install"
 	out_action "Copy kernel"
-	cp /run/archiso/bootmnt/arch/boot/x86_64/vmlinuz "${NEWROOT}"/boot/vmlinuz-linux 
+	cp /run/archiso/bootmnt/arch/boot/x86_64/vmlinuz "${NEWROOT}"/boot/vmlinuz-linux || die "Unable to copy kernel on ${NEWROOT}" "clean_install"
 	out_action "Remove mkinitcpio-archiso.conf"
 	rm -f "${NEWROOT}"/etc/mkinitcpio-archiso.conf
+	mount_umount "$NEWROOT" "mount"
 	out_action "Build initramfs"
-	chroot "${NEWROOT}" mkinitcpio -p linux
+	chroot "${NEWROOT}" mkinitcpio -p linux || die "Unable to build initramfs on ${NEWROOT}" "clean_install"
 	
 }
 start_from(){
