@@ -154,3 +154,9 @@ sync_data(){
 	cp /var/lib/pacman/sync/*.{db,sig} "$NEWROOT/var/lib/pacman/sync/" || die "/var/lib/pacman/sync/*.{db,sig} doesn't exit on host" "clean_install"
 		
 }
+
+update_newroot(){
+	
+	out_action "Check for update..."
+	pacman -r "$NEWROOT" -Syu --config "$GENERAL_DIR/$CONFIG_DIR/pacman.conf" --cachedir "$CACHE_DIR" --noconfirm || die " Failed to update the fresh system with pacman" "clean_install"
+}
