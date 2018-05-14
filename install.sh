@@ -33,9 +33,11 @@ CONFIG="/etc/obarun/install.conf"
 
 main_menu(){
 
-local step=100 enter
+local step=100 enter mK
 
-while [[ "$step" !=  13 ]]; do
+mK=$(sed -n 's:^KEYMAP=::p' /etc/s6.conf)
+
+while [[ "$step" !=  8 ]]; do
 	# reload the source, this is allow to see the change made on the menu
 	source "${CONFIG}"
 	clear
@@ -54,56 +56,102 @@ while [[ "$step" !=  13 ]]; do
 	out_menu_title "***************************************************************************************"
 	out_menu_title "                            Configuration"
 	out_menu_title "***************************************************************************************"
-	out_void 
-	out_menu_list " 1  -  Select Editor ${green}[$EDITOR]"
-	out_menu_list " 2  -  Choose your Desktop environment ${green}[$CONFIG_DIR]"
-	out_menu_list " 3  -  Edit pacman.conf file used by the script"
-	out_menu_list " 4  -  Define cache directory for pacman ${green}[$CACHE_DIR]"
-	out_menu_list " 5  -  Edit the list of packages that will be installed (AUR including)"
-	out_menu_list " 6  -  Enter root directory for installation ${green}[$NEWROOT]"
 	out_void
+	out_menu_list " 1  -  Pick your keymap language for the install process ${green}[$mK]"
+	out_menu_list " 2  -  Enter root directory for installation ${green}[$NEWROOT]"
+	out_menu_list " 3  -  Choose your Desktop environment ${green}[$CONFIG_DIR]"
+	out_void 
 	out_menu_title "***************************************************************************************"
 	out_menu_title "                            Installation"
 	out_menu_title "***************************************************************************************"
+	out_void 
+	out_menu_list " 4  -  Install the system or resume an aborted installation"
+	out_menu_list " 5  -  Customize the fresh installation"
+	out_void 
+	out_menu_title "***************************************************************************************"
+	out_menu_title "                            Options"
+	out_menu_title "***************************************************************************************"
 	out_void
-	out_menu_list " 7  -  Install the system or resume an aborted installation"
-	out_menu_list " 8  -  Customize the fresh installation"
+	out_menu_list " 6 -  Use rankmirrors${green}[$RANKMIRRORS]"
+	out_menu_list " 7 -  Expert options"
+	out_void
 	out_void 
-	out_menu_title "***************************************************************************************"
-	out_menu_title "                            Expert mode"
-	out_menu_title "  Assumptions : the base system must be installed at least before using this mode"
-	out_menu_title "***************************************************************************************"
-	out_void 
-	out_menu_list " 9  -  Edit the script customizeChroot"
-	out_menu_list " 10 -  Launch a shell on ${green}[$NEWROOT]${reset}${bold} directory"
-	out_menu_list " 11 -  Browse ${green}[$NEWROOT]${reset}${bold} with Midnight Commander"
-	out_menu_list " 12 -  Use rankmirrors${green}[$RANKMIRRORS]"
-	out_void 
-	out_void 
-	out_menu_list " ${red}13 -  Exit installation script"
+	out_menu_list " ${red}8 -  Exit installation script"
 	out_void 
 	out_void 
 	out_menu_list "Enter your choice :";read  step
 
-		case "$step" in 
-			1)	choose_editor;;
-			2)	choose_config;; # Never comment this options
-			3)	edit_pacman;;
-			4)	choose_cache;;
-			5)	select_list;;
-			6)	choose_rootdir;; # Never comment this options
-			7)	install_system;;
-			8)	customize_newroot;;
-			9)	edit_customize_chroot;;
-			10) call_shell;;
-			11)	mc_newroot;;
-			12) choose_rankmirrors;;
-			13) out_action "Exiting"
+		case "$step" in
+			1)	define_xkeymap
+				if [[ -n $DISPLAY ]];then
+					setxkbmap "${mK}";;
+				else
+					loadkeys fr
+				fi
+			2)	choose_rootdir;; # Never comment this options
+			3)	choose_config;; # Never comment this options
+			4)	install_system;;
+			5)	customize_newroot;;
+			6)	choose_rankmirrors;;
+			7)	expert_menu;;
+			8)	out_action "Exiting"
 				clean_install;;
 			*) out_notvalid "Invalid number, Please retry: "
 		esac
 		out_info "Press enter to return to the Main menu"
 		read enter 
+done
+unset enter
+}
+
+##		Expert mode menu
+expert_menu(){
+
+local step=100 enter
+
+while [[ "$step" !=  8 ]]; do
+	# reload the source, this is allow to see the change made on the menu
+	source "${CONFIG}"
+	clear
+	out_void
+	out_void 
+	out_menu_title "***************************************************************************************"
+	out_menu_title "                            Expert options"
+	out_menu_title "***************************************************************************************"
+	out_void 
+	out_menu_list " 1  -  Select Editor ${green}[$EDITOR]"
+	out_menu_list " 2  -  Edit pacman.conf file used by the script"
+	out_menu_list " 3  -  Define cache directory for pacman ${green}[$CACHE_DIR]"
+	out_menu_list " 4  -  Edit the list of packages that will be installed (AUR including)"
+	out_void
+	out_menu_title "***************************************************************************************"
+	out_menu_title "  Assumptions : the base system must be installed at least"
+	out_menu_title "                before using this following options"
+	out_menu_title "***************************************************************************************"
+	out_void
+	out_menu_list " 5  - Edit the script customizeChroot"
+	out_menu_list " 6 -  Launch a shell on ${green}[$NEWROOT]${reset}${bold} directory"
+	out_menu_list " 7 -  Browse ${green}[$NEWROOT]${reset}${bold} with Midnight Commander"
+	out_void 
+	out_void 
+	out_menu_list " ${red}8 -  Return to the main menu"
+	out_void 
+	out_void 
+	out_menu_list "Enter your choice :";read  step
+	
+		case "$step" in
+			1)	choose_editor;;
+			2)	edit_pacman;;
+			3)	choose_cache;;
+			4)	select_list;;
+			5)	edit_customize_chroot;;
+			6)	call_shell;;
+			7)	mc_newroot;;
+			8)	return 1;;
+			*) 	out_notvalid "Invalid number, please retry:"
+		esac
+		out_info "Press enter to return to the expert menu"
+		read enter
 done
 unset enter
 }
@@ -136,7 +184,7 @@ while [[ "$step" !=  11 ]]; do
 	out_menu_list " 7  -  Continue the installation"
 	out_void 
 	out_menu_title "**************************************************************"
-	out_menu_title "                   Expert mode"
+	out_menu_title "                   Expert mode (optionnal)"
 	out_menu_title "**************************************************************"
 	out_void 
 	out_menu_list " 8  -  Edit s6.conf file"
@@ -169,7 +217,40 @@ while [[ "$step" !=  11 ]]; do
 done
 unset enter
 }
-
+copy_airootfs(){
+	out_action "Copy files from airootfs"
+	rsync -a --progress /run/archiso/sfs/airootfs/ "${NEWROOT}"/
+	out_action "Remove Obarun user"
+	userdel -R "${NEWROOT}" -r obarun
+	out_action "Remove root user"
+	userdel -R "${NEWROOT}" -r root
+	out_action "Copy kernel"
+	cp /run/archiso/bootmnt/arch/boot/x86_64/vmlinuz "${NEWROOT}"/boot/vmlinuz-linux 
+	out_action "Remove mkinitcpio-archiso.conf"
+	rm -f "${NEWROOT}"/etc/mkinitcpio-archiso.conf
+	out_action "Build initramfs"
+	chroot "${NEWROOT}" mkinitcpio -p linux
+	
+}
+start_from(){
+	
+	if [[ -d /run/archiso/sfs/airootfs/ ]];then
+		copy_airootfs
+		mount_umount "$NEWROOT" "mount"
+		check_gpg "$GPG_DIR"
+		sync_data
+		install_package
+		update_newroot
+	else
+		create_dir
+		mount_umount "$NEWROOT" "mount"
+		copy_file
+		check_gpg "$GPG_DIR"
+		sync_data
+		install_package
+	fi
+}
+		
 ##		Start the installation
 
 install_system(){
@@ -180,13 +261,8 @@ install_system(){
 		out_notvalid "You need to mount a device on $NEWROOT or choose another directory"
 		(sleep 4) && out_info "Returning to the main_menu" && (sleep 1) && main_menu
 	fi
-		
-	create_dir
-	mount_umount "$NEWROOT" "mount"
-	copy_file
-	check_gpg "$GPG_DIR"
-	sync_data
-	install_package
+	
+	start_from
 	gen_fstab "$NEWROOT"
 	copy_rootfs
 	define_root
