@@ -83,11 +83,14 @@ while [[ "$step" !=  8 ]]; do
 
 		case "$step" in
 			1)	define_xkeymap
+				source "${CONFIG}"
+				mK="${XKEYMAP}"
 				if [[ -n $DISPLAY ]];then
-					setxkbmap "${mK}";;
+					setxkbmap "${mK}"
 				else
-					loadkeys fr
+					loadkeys "${mK}"
 				fi
+				;;
 			2)	choose_rootdir;; # Never comment this options
 			3)	choose_config;; # Never comment this options
 			4)	install_system;;
