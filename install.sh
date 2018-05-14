@@ -37,7 +37,7 @@ local step=100 enter mK
 
 mK=$(sed -n 's:^KEYMAP=::p' /etc/s6.conf)
 
-while [[ "$step" !=  8 ]]; do
+while [[ "$step" !=  7 ]]; do
 	# reload the source, this is allow to see the change made on the menu
 	source "${CONFIG}"
 	clear
@@ -66,17 +66,16 @@ while [[ "$step" !=  8 ]]; do
 	out_menu_title "***************************************************************************************"
 	out_void 
 	out_menu_list " 4  -  Install the system or resume an aborted installation"
-	out_menu_list " 5  -  Customize the fresh installation"
 	out_void 
 	out_menu_title "***************************************************************************************"
 	out_menu_title "                            Options"
 	out_menu_title "***************************************************************************************"
 	out_void
-	out_menu_list " 6 -  Use rankmirrors${green}[$RANKMIRRORS]"
-	out_menu_list " 7 -  Expert options"
+	out_menu_list " 5 -  Use rankmirrors${green}[$RANKMIRRORS]"
+	out_menu_list " 6 -  Expert options"
 	out_void
 	out_void 
-	out_menu_list " ${red}8 -  Exit installation script"
+	out_menu_list " ${red}7 -  Exit installation script"
 	out_void 
 	out_void 
 	out_menu_list "Enter your choice :";read  step
@@ -94,10 +93,9 @@ while [[ "$step" !=  8 ]]; do
 			2)	choose_rootdir;; # Never comment this options
 			3)	choose_config;; # Never comment this options
 			4)	install_system;;
-			5)	customize_newroot;;
-			6)	choose_rankmirrors;;
-			7)	expert_menu;;
-			8)	out_action "Exiting"
+			5)	choose_rankmirrors;;
+			6)	expert_menu;;
+			7)	out_action "Exiting"
 				clean_install;;
 			*) out_notvalid "Invalid number, Please retry: "
 		esac
@@ -112,7 +110,7 @@ expert_menu(){
 
 local step=100 enter
 
-while [[ "$step" !=  8 ]]; do
+while [[ "$step" !=  9 ]]; do
 	# reload the source, this is allow to see the change made on the menu
 	source "${CONFIG}"
 	clear
@@ -132,12 +130,13 @@ while [[ "$step" !=  8 ]]; do
 	out_menu_title "                before using this following options"
 	out_menu_title "***************************************************************************************"
 	out_void
-	out_menu_list " 5  - Edit the script customizeChroot"
-	out_menu_list " 6 -  Launch a shell on ${green}[$NEWROOT]${reset}${bold} directory"
-	out_menu_list " 7 -  Browse ${green}[$NEWROOT]${reset}${bold} with Midnight Commander"
+	out_menu_list " 5  - Go to the Customize menu"
+	out_menu_list " 6  - Edit the script customizeChroot"
+	out_menu_list " 7 -  Launch a shell on ${green}[$NEWROOT]${reset}${bold} directory"
+	out_menu_list " 8 -  Browse ${green}[$NEWROOT]${reset}${bold} with Midnight Commander"
 	out_void 
 	out_void 
-	out_menu_list " ${red}8 -  Return to the main menu"
+	out_menu_list " ${red}9 -  Return to the main menu"
 	out_void 
 	out_void 
 	out_menu_list "Enter your choice :";read  step
@@ -147,10 +146,11 @@ while [[ "$step" !=  8 ]]; do
 			2)	edit_pacman;;
 			3)	choose_cache;;
 			4)	select_list;;
-			5)	edit_customize_chroot;;
-			6)	call_shell;;
-			7)	mc_newroot;;
-			8)	return 1;;
+			5)	customize_newroot;;
+			6)	edit_customize_chroot;;
+			7)	call_shell;;
+			8)	mc_newroot;;
+			9)	return 1;;
 			*) 	out_notvalid "Invalid number, please retry:"
 		esac
 		out_info "Press enter to return to the expert menu"
@@ -172,27 +172,30 @@ while [[ "$step" !=  11 ]]; do
 	source "${CONFIG}"
 	clear
 	out_void 
-	out_void 
-	out_menu_title "**************************************************************"
-	out_menu_title "              CustomizeChroot menu"
-	out_menu_title "**************************************************************"
-	out_void 
-	out_menu_list " 1  -  Define hostname ${green}[$HOSTNAME]"
-	out_menu_list " 2  -  Define locale ${green}[$LOCALE]"
-	out_menu_list " 3  -  Define localtime ${green}[$ZONE/$SUBZONE]"
+	out_void
+	out_menu_title "***************************************************************************************"
+	out_menu_title "                            Customize menu"
+	out_void
+	out_menu_title "  Assumptions : the base system must be installed at least"
+	out_menu_title "                before using this following menu"
+	out_menu_title "***************************************************************************************"
+	out_void
+	out_menu_list " 1  -  Define your hostname ${green}[$HOSTNAME]"
+	out_menu_list " 2  -  Define your locale ${green}[$LOCALE]"
+	out_menu_list " 3  -  Define your localtime ${green}[$ZONE/$SUBZONE]"
 	out_menu_list " 4  -  Define a new user ${green}[$NEWUSER]"
-	out_menu_list " 5  -  Define console keymap ${green}[$KEYMAP]"
-	out_menu_list " 6  -  Define desktop keymap ${green}[$XKEYMAP]"
+	out_menu_list " 5  -  Define your console keymap ${green}[$KEYMAP]"
+	out_menu_list " 6  -  Define your desktop keymap ${green}[$XKEYMAP]"
 	out_void 
 	out_menu_list " 7  -  Continue the installation"
 	out_void 
-	out_menu_title "**************************************************************"
-	out_menu_title "                   Expert mode (optionnal)"
-	out_menu_title "**************************************************************"
+	out_menu_title "***************************************************************************************"
+	out_menu_title "                            Expert mode (optionnal)"
+	out_menu_title "***************************************************************************************"
 	out_void 
 	out_menu_list " 8  -  Edit s6.conf file"
 	out_menu_list " 9  -  Browse with Midnight Commander"
-	out_menu_list " 10 -  Delete custo_once files"
+	out_menu_list " 10 -  Delete a custo_once file(s)"
 	out_void 
 	out_void 
 	out_menu_list " ${red}11 -  Return to the main menu"
@@ -244,7 +247,6 @@ start_from(){
 		check_gpg "$GPG_DIR"
 		sync_data
 		install_package
-		update_newroot
 	else
 		create_dir
 		mount_umount "$NEWROOT" "mount"
@@ -272,6 +274,9 @@ install_system(){
 	define_root
 	config_syslinux
 	config_virtualbox
+	customize_newroot
+	update_newroot
+	rm -rf "${SOURCES_FUNC}" || out_notvalid "Warning : Unable to remove ${SOURCES_FUNC}"
 	out_action "Base system installed successfully"
 }
 
