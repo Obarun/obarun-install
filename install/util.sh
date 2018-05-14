@@ -247,11 +247,31 @@ custo_once() {
 	fi
     unset _tmp
 }
+warm_msg_start(){
+	out_void 
+	out_menu_title "***************************************************************************************" 
+}
+warm_msg_end(){
+	out_menu_title "***************************************************************************************"
+	out_void 
+}
+
 warm_msg(){
-	msg="${1}"
-	out_void 
-	out_menu_title "***************************************************************************************"
-	out_menu_title "                            ${msg}"
-	out_menu_title "***************************************************************************************"
-	out_void 
+	
+	local msg="${1}" _msg cmd
+	
+	warm_msg_start
+	for _msg in ${msg[@]};do
+		out_menu_title "                            ${_msg}"
+	do
+	warm_msg_end
+	
+	out_info "Press any key to continue"
+	out_info "Press q to exit"
+	read cmd
+	if [[ $cmd == "q" ]];then
+		die "" "clean_install"
+	fi
+		
+	unset msg _msg cmd
 }
