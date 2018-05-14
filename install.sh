@@ -222,7 +222,7 @@ unset enter
 }
 copy_airootfs(){
 	out_action "Copy files from airootfs"
-	rsync -a --progress /run/archiso/sfs/airootfs/ "${NEWROOT}"/ || die "Unable to copy airootfs on ${NEWROOT}" "clean_install"
+	rsync -a --info=progress2 /run/archiso/sfs/airootfs/ "${NEWROOT}"/ || die "Unable to copy airootfs on ${NEWROOT}" "clean_install"
 	out_action "Remove Obarun user"
 	userdel -R "${NEWROOT}" -r obarun || die "Unable to delete obarun user" "clean_install"
 	out_action "Remove root user"
