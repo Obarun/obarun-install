@@ -193,10 +193,10 @@ define_root(){
 	local pass_exist
 	pass_exist=$(grep "root" $NEWROOT/etc/shadow | awk -F':' '{print $2}')
 	
-	if [[ ! $(grep "root::" $NEWROOT/etc/shadow) ]]; then
-		out_action "Create root user on $NEWROOT"
-		usermod -R "$NEWROOT" -s /usr/bin/zsh root
-	fi
+	#if [[ ! $(grep "root::" $NEWROOT/etc/shadow) ]]; then
+	#	out_action "Create root user on $NEWROOT"
+	#	usermod -R "$NEWROOT" -s /usr/bin/zsh root
+	#fi
 	
 	out_action "Copy skeleton to $NEWROOT/root/"
 	cp -rT "$NEWROOT/etc/skel/" "$NEWROOT/root/"
