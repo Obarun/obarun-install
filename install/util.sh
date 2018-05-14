@@ -263,7 +263,7 @@ warm_msg(){
 	warm_msg_start
 	for _msg in ${msg[@]};do
 		out_menu_title "                            ${_msg}"
-	do
+	done
 	warm_msg_end
 	
 	out_info "Press any key to continue"
