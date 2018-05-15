@@ -230,6 +230,11 @@ unset enter
 copy_airootfs(){
 	out_action "Copy files from airootfs"
 	rsync -a --info=progress2 /run/archiso/sfs/airootfs/ "${NEWROOT}"/ || die "Unable to copy airootfs on ${NEWROOT}" "clean_install"
+	out_action "Hot fix : Remove libmozjs-52"
+	rm -f "${NEWROOT}"/usr/lib/libmozjs-52.so.0
+	out_action "Handle service database"
+	rm -rf "${NEWROOT}"/etc/s6-serv/enabled/rc/compiled/Live
+	make_symlinks "-sfT" "${NEWROOT}"/etc/s6-serv/enabled/rc/compiled/Live "${NEWROOT}"/etc/s6-serv/enabled/rc/compiled/ "current"
 	out_action "Remove Obarun user"
 	userdel -R "${NEWROOT}" -r obarun || die "Unable to delete obarun user" "clean_install"
 	out_action "Copy kernel"
