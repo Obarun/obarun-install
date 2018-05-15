@@ -28,7 +28,8 @@ define_hostname(){
 
 define_locale(){
 	
-	local enter _locale
+	local enter 
+	local -a _locale
 	
 	out_action "Define your locale by uncomment desired line, only one line is allowed"
 	out_info "Press enter to continue"
@@ -36,9 +37,17 @@ define_locale(){
 	read enter
 	
 	"$EDITOR" "${NEWROOT}"/etc/locale.gen
+	_locale=( $(grep -v "#" ${NEWROOT}/etc/locale.gen | awk -F " " '{ print $1 }') )
 	
-	_locale=$(grep -v "#" ${NEWROOT}/etc/locale.gen | awk -F " " '{ print $1 }')
-	
+	while (( "${#_locale[@]}" > 1 )); do
+		out_notvalid "Only one line uncommented is allowed"
+		out_notvalid "Please edit again the file"
+		out_info "Press enter to continue"
+		read enter
+		"$EDITOR" "${NEWROOT}"/etc/locale.gen
+		_locale=( $(grep -v "#" ${NEWROOT}/etc/locale.gen | awk -F " " '{ print $1 }') )
+	done
+		
 	out_valid "your locale is now : $_locale"
 	
 	sed -i "s,LOCALE=.*$,LOCALE=\"$_locale\",g" "${CONFIG}"
@@ -191,19 +200,20 @@ define_user(){
 define_root(){
 	
 	local pass_exist
+	local force="${1}"
 	pass_exist=$(grep "root" $NEWROOT/etc/shadow | awk -F':' '{print $2}')
 	
-	#if [[ ! $(grep "root::" $NEWROOT/etc/shadow) ]]; then
-	#	out_action "Create root user on $NEWROOT"
-	#	usermod -R "$NEWROOT" -s /usr/bin/zsh root
-	#fi
+	if [[ ! $(grep "root::" $NEWROOT/etc/shadow) ]]; then
+		out_action "Create root user on $NEWROOT"
+		usermod -R "$NEWROOT" -s /usr/bin/zsh root
+	fi
 	
 	out_action "Copy skeleton to $NEWROOT/root/"
 	cp -rT "$NEWROOT/etc/skel/" "$NEWROOT/root/"
 		
 	chmod 0750 "$NEWROOT/root"
 	
-	if [[ -z "${pass_exist}" ]]; then
+	if [[ -z "${pass_exist}" || (( "${force}" )) ]]; then
 		out_action "You need to define root password"
 		pass_root
 		out_valid "root user was modified successfully"
