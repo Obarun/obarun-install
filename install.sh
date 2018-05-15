@@ -51,7 +51,7 @@ while [[ "$step" !=  8 ]]; do
 	out_menu_list "	- User has partitioned, formatted, and mounted partitions on a directory"
 	out_menu_list "	- Network is functional"
 	out_menu_list "	- A valid mirror appears in /etc/pacman.d/mirrorlist"
-	out_menu_list "	- Defaults options are specified in ${green} green${reset} brackets"
+	out_menu_list "	- Defaults options are specified in ${green}green${reset} brackets"
 	out_void 
 	out_menu_title "***************************************************************************************"
 	out_menu_title "                            Configuration"
