@@ -234,7 +234,7 @@ copy_airootfs(){
 	rm -f "${NEWROOT}"/usr/lib/libmozjs-52.so.0
 	out_action "Handle service database"
 	rm -rf "${NEWROOT}"/etc/s6-serv/enabled/rc/compiled/Live
-	make_symlinks "-sfT" "${NEWROOT}"/etc/s6-serv/enabled/rc/compiled/Live "${NEWROOT}"/etc/s6-serv/enabled/rc/compiled/ "current"
+	make_symlinks "-sfT" "${NEWROOT}"/etc/s6-serv/enabled/rc/compiled/Default "${NEWROOT}"/etc/s6-serv/enabled/rc/compiled/ "current"
 	out_action "Remove Obarun user"
 	userdel -R "${NEWROOT}" -r obarun || die "Unable to delete obarun user" "clean_install"
 	out_action "Copy kernel"
@@ -290,7 +290,7 @@ install_system(){
 	fi
 	update_newroot
 	rm -rf "${SOURCES_FUNC}" || out_notvalid "Warning : Unable to remove ${SOURCES_FUNC}"
-	out_action "Base system installed successfully"
+	out_valid "SYSTEM WAS INSTALLED SUCCESSFULLY"
 }
 
 customize_newroot(){
