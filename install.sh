@@ -243,7 +243,7 @@ copy_airootfs(){
 }
 start_from(){
 	
-	if [[ "$CONFIG_DIR}" == "jwm" ]];then
+	if [[ "${CONFIG_DIR}" == "jwm" ]];then
 		if [[ -d /run/archiso/sfs/airootfs/ ]];then
 			copy_airootfs
 			mount_umount "$NEWROOT" "mount"
