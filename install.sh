@@ -37,7 +37,7 @@ local step=100 enter mK
 
 mK=$(sed -n 's:^KEYMAP=::p' /etc/s6.conf)
 
-while [[ "$step" !=  7 ]]; do
+while [[ "$step" !=  8 ]]; do
 	# reload the source, this is allow to see the change made on the menu
 	source "${CONFIG}"
 	clear
@@ -64,18 +64,19 @@ while [[ "$step" !=  7 ]]; do
 	out_menu_title "***************************************************************************************"
 	out_menu_title "                            Installation"
 	out_menu_title "***************************************************************************************"
-	out_void 
-	out_menu_list " 4  -  Install the system or resume an aborted installation"
+	out_void
+	out_menu_list " 4  -  Quick install (Copy the ISO as it)"
+	out_menu_list " 5  -  Install the system or resume an aborted installation"
 	out_void 
 	out_menu_title "***************************************************************************************"
 	out_menu_title "                            Options"
 	out_menu_title "***************************************************************************************"
 	out_void
-	out_menu_list " 5 -  Use rankmirrors${green}[$RANKMIRRORS]"
-	out_menu_list " 6 -  Expert options"
+	out_menu_list " 6 -  Use rankmirrors${green}[$RANKMIRRORS]"
+	out_menu_list " 7 -  Expert options"
 	out_void
 	out_void 
-	out_menu_list " ${red}7 -  Exit installation script"
+	out_menu_list " ${red}8 -  Exit installation script"
 	out_void 
 	out_void 
 	out_menu_list "Enter your choice :";read  step
@@ -92,10 +93,13 @@ while [[ "$step" !=  7 ]]; do
 				;;
 			2)	choose_rootdir;; # Never comment this options
 			3)	choose_config;; # Never comment this options
-			4)	install_system;;
-			5)	choose_rankmirrors;;
-			6)	expert_menu;;
-			7)	out_action "Exiting"
+			4)	sed -i "s,CONFIG_DIR=.*$,CONFIG_DIR=\"jwm\",g" /etc/obarun/install.conf
+				source "${CONFIG}" 
+				install_system;;
+			5)	install_system;;
+			6)	choose_rankmirrors;;
+			7)	expert_menu;;
+			8)	out_action "Exiting"
 				clean_install;;
 			*) out_notvalid "Invalid number, Please retry: "
 		esac
@@ -228,8 +232,6 @@ copy_airootfs(){
 	rsync -a --info=progress2 /run/archiso/sfs/airootfs/ "${NEWROOT}"/ || die "Unable to copy airootfs on ${NEWROOT}" "clean_install"
 	out_action "Remove Obarun user"
 	userdel -R "${NEWROOT}" -r obarun || die "Unable to delete obarun user" "clean_install"
-	out_action "Remove root user"
-	userdel -R "${NEWROOT}" -r root || die "Unable to delete root user" "clean_install"
 	out_action "Copy kernel"
 	cp /run/archiso/bootmnt/arch/boot/x86_64/vmlinuz "${NEWROOT}"/boot/vmlinuz-linux || die "Unable to copy kernel on ${NEWROOT}" "clean_install"
 	out_action "Remove mkinitcpio-archiso.conf"
@@ -241,12 +243,16 @@ copy_airootfs(){
 }
 start_from(){
 	
-	if [[ -d /run/archiso/sfs/airootfs/ ]];then
-		copy_airootfs
-		mount_umount "$NEWROOT" "mount"
-		check_gpg "$GPG_DIR"
-		sync_data
-		install_package
+	if [[ "$CONFIG_DIR}" == "jwm" ]];then
+		if [[ -d /run/archiso/sfs/airootfs/ ]];then
+			copy_airootfs
+			mount_umount "$NEWROOT" "mount"
+			check_gpg "$GPG_DIR"
+			sync_data
+			install_package
+		else
+			die "You start from the ISO to use this mode" "clean_install"
+		fi
 	else
 		create_dir
 		mount_umount "$NEWROOT" "mount"
@@ -271,10 +277,12 @@ install_system(){
 	start_from
 	gen_fstab "$NEWROOT"
 	copy_rootfs
-	define_root
+	define_root 1
 	config_syslinux
 	config_virtualbox
-	customize_newroot
+	if ! customize_newroot;then
+		return
+	fi
 	update_newroot
 	rm -rf "${SOURCES_FUNC}" || out_notvalid "Warning : Unable to remove ${SOURCES_FUNC}"
 	out_action "Base system installed successfully"
@@ -293,7 +301,7 @@ customize_newroot(){
 	create_dir
 	mount_umount "$NEWROOT" "mount"
 	copy_rootfs
-	define_root
+	define_root 
 	customizeChroot_menu
 	if (( $? )); then
 		return
