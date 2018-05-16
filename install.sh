@@ -28,6 +28,7 @@ GENERAL_DIR="$HOME_PATH/config"
 SOURCES_FUNC="/tmp/obarun-install-tmp"
 LOCALTIME="/usr/share/zoneinfo/right"
 CONFIG="/etc/obarun/install.conf"
+QUICK=0
 
 ## 		Main menu
 
@@ -94,7 +95,8 @@ while [[ "$step" !=  8 ]]; do
 			2)	choose_rootdir;; # Never comment this options
 			3)	choose_config;; # Never comment this options
 			4)	sed -i "s,CONFIG_DIR=.*$,CONFIG_DIR=\"jwm\",g" /etc/obarun/install.conf
-				source "${CONFIG}" 
+				source "${CONFIG}"
+				QUICK=1
 				install_system;;
 			5)	install_system;;
 			6)	choose_rankmirrors;;
@@ -248,7 +250,7 @@ copy_airootfs(){
 }
 start_from(){
 	
-	if [[ "${CONFIG_DIR}" == "jwm" ]];then
+	if (( "${QUICK}" ));then
 		if [[ -d /run/archiso/sfs/airootfs/ ]];then
 			copy_airootfs
 			mount_umount "$NEWROOT" "mount"
@@ -256,7 +258,7 @@ start_from(){
 			sync_data
 			install_package
 		else
-			die "You start from the ISO to use this mode" "clean_install"
+			die "You must start from the ISO to use this mode" "clean_install"
 		fi
 	else
 		create_dir
@@ -285,10 +287,16 @@ install_system(){
 	define_root 1
 	config_syslinux
 	config_virtualbox
-	if ! customize_newroot;then
+	if ! customize_newroot;then ## number 11 was picked at customize menu
 		return
 	fi
-	update_newroot
+	if (( "${QUICK}" ));then
+		out_action "Do you want to update the system"
+		reply_answer
+		if (( ! $? )); then
+			update_newroot
+		fi
+	fi
 	rm -rf "${SOURCES_FUNC}" || out_notvalid "Warning : Unable to remove ${SOURCES_FUNC}"
 	out_valid "SYSTEM WAS INSTALLED SUCCESSFULLY"
 }
