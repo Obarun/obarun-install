@@ -1,5 +1,5 @@
 #!@BINDIR@/bash
-# Copyright (c) 2015-2017 Eric Vidal <eric@obarun.org>
+# Copyright (c) 2015-2018 Eric Vidal <eric@obarun.org>
 # All rights reserved.
 # 
 # This file is part of Obarun. It is subject to the license terms in
@@ -267,6 +267,7 @@ start_from(){
 		check_gpg "$GPG_DIR"
 		sync_data
 		install_package
+		copy_rootfs
 	fi
 }
 		
@@ -283,7 +284,8 @@ install_system(){
 	
 	start_from
 	gen_fstab "$NEWROOT"
-	copy_rootfs
+	config_gpg
+	config_mirrorlist
 	define_root 1
 	config_syslinux
 	config_virtualbox

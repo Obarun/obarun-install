@@ -1,5 +1,5 @@
 #!@BINDIR@/bash
-# Copyright (c) 2015-2017 Eric Vidal <eric@obarun.org>
+# Copyright (c) 2015-2018 Eric Vidal <eric@obarun.org>
 # All rights reserved.
 # 
 # This file is part of Obarun. It is subject to the license terms in
@@ -48,37 +48,51 @@ trap "clean_install" ERR QUIT KILL STOP INT TERM
 ##		Update package or not
 
 main_update(){
-	out_action "Do you want to update obarun-install package? [y|n]"
-
-	reply_answer
-
-	if (( ! $? )); then
-		pac_update "obarun-install" "/var/lib/obarun/obarun-install" "$GIT_ADDR" || die " Impossible to update" "clean_install"
-		sourcing
-	else
-		out_notvalid "WARNING : Some functionalities will cannot works properly"
-		out_info "Press enter to continue"
-		read enter
-	fi
 	
-	out_action "Do you want to update obarun-install-themes package? [y|n]"
+	local r=0
 	
-	reply_answer
+	if [[ "$UPDATE_INS" == "yes" ]]; then 
+		out_action "Do you want to update obarun-install package? [y|n]"
 
-	if (( ! $? )); then
-		pac_update "obarun-install-themes" "/var/lib/obarun/obarun-install-themes" "https://github.com/Obarun/obarun-install-themes.git" || die " Impossible to update" "clean_install"
-	else
-		out_notvalid "WARNING : Some configurations can be out of date"
-		out_info "Press enter to continue"
-		read enter
+		reply_answer
+
+		if (( ! $? )); then
+			pac_update "obarun-install" "/var/lib/obarun/obarun-install" "$GIT_ADDR" || die " Impossible to update" "clean_install"
+			#sourcing
+			sed -i "s,^UPDATE_INS=.*$,UPDATE_INS=\"no\"," "${CONFIG}"
+			r=1
+		else
+			out_notvalid "WARNING : Some functionalities will cannot works properly"
+			out_info "Press enter to continue"
+			read enter
+		fi
 	fi
+	if [[ "$UPDATE_TPL" == "yes" ]]; then 
+		out_action "Do you want to update obarun-install-themes package? [y|n]"
+		
+		reply_answer
+
+		if (( ! $? )); then
+			pac_update "obarun-install-themes" "/var/lib/obarun/obarun-install-themes" "https://github.com/Obarun/obarun-install-themes.git" || die " Impossible to update" "clean_install"
+			sed -i "s,^UPDATE_TPL=.*$,UPDATE_TPL=\"no\"," "${CONFIG}"
+		else
+			out_notvalid "WARNING : Some configurations can be out of date"
+			out_info "Press enter to continue"
+			read enter
+		fi
+	fi
+	if (( "${r}" )); then
+		out_notvalid "Obarun-install was updated.The script need to be restarted to apply the changes."
+		out_notvalid "Just start it again,thanks."
+		out_notvalid "Existing..."
+		exit 0
+	fi
+	unset r
 }
 
 #warm_msg "You need to update first the glibc package on your system" "by doing : pacman -Sy glibc"
 
-if [[ "$UPDATE" == "yes" ]]; then
-	main_update
-fi
+main_update
 
 main_menu
 

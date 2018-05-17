@@ -1,5 +1,5 @@
 #!@BINDIR@/bash
-# Copyright (c) 2015-2017 Eric Vidal <eric@obarun.org>
+# Copyright (c) 2015-2018 Eric Vidal <eric@obarun.org>
 # All rights reserved.
 # 
 # This file is part of Obarun. It is subject to the license terms in
@@ -80,7 +80,7 @@ install_package(){
 	
 	# check installed packages
 	
-	out_action "Ckeck installed packages, this may take time..."
+	out_action "Check installed packages, this may take time..."
 	
 	list=" ${installed[@]} " #include blank  
 	while read item; do
@@ -138,12 +138,9 @@ install_package(){
 sync_data(){
 	
 	if [[ "${RANKMIRRORS}" == "yes" ]]; then
-		out_info "Copy /etc/pacman.d/mirrorlist to /etc/pacman.d/mirrorlist.backup"
-		cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
-		sed -i 's/^#Server/Server/' /etc/pacman.d/mirrorlist
-		out_action "Check fastest local mirrors, this may take time..."
-		rankmirrors -n 20 /etc/pacman.d/mirrorlist
+		mirrorlist
 	fi
+	
 	out_action "Synchronize database"
 	pacman -Sy --config "$GENERAL_DIR/$CONFIG_DIR/pacman.conf" || die " Impossible to synchronize database" "clean_install"
 	
@@ -155,8 +152,52 @@ sync_data(){
 		
 }
 
+
 update_newroot(){
 	
 	out_action "Check for update..."
 	pacman -r "$NEWROOT" -Syu --config "$GENERAL_DIR/$CONFIG_DIR/pacman.conf" --cachedir "$CACHE_DIR" --noconfirm || die " Failed to update the fresh system with pacman" "clean_install"
+}
+
+mirrorlist(){
+	
+	local country rc
+	local -a mirrorlistnew
+	
+	rc=0
+	
+	out_info "Copy /etc/pacman.d/mirrorlist to /etc/pacman.d/mirrorlist.backup"
+	cp /etc/pacman.d/mirrorlist /etc/pacman.d/mirrorlist.backup
+	
+	
+	out_info "Download a fresh list of mirrors"
+	curl -s "https://www.archlinux.org/mirrorlist/?country=all&protocol=http&ip_version=4" -o /etc/pacman.d/mirrorlist.pacnew || die "Unable to download mirrorlist" "clean_install"
+	
+	mirrorlistnew=$(grep "^## [A-Z]" /etc/pacman.d/mirrorlist.pacnew | sed -e '1,2d' -e 's:^## ::' -e 's: :_:g')
+	mirrorlistnew+=" Exit"
+	
+	out_info "Select your country"
+	select country in ${mirrorlistnew[@]}; do
+		case "${country}" in
+			Exit) rc=1
+				break
+				;;
+			*)	if check_elements "${country}" ${mirrorlistnew[@]}; then
+					country=$(echo "${country}"|sed 's:_: :g')
+					awk '/^## '"${country}"'$/ {f=1} f==0 {next} /^$/ {exit} {print substr($0, 2)}' \
+					/etc/pacman.d/mirrorlist.pacnew | grep -v '#' > /etc/pacman.d/mirrorlist.rank
+					break
+				else
+					out_notvalid "Invalid number, retry :"
+				fi
+		esac
+	done
+	
+	if (( !"${rc}" )); then
+		out_action "Check fastest local mirrors, this may take time..."
+		rankmirrors -n 10 /etc/pacman.d/mirrorlist.rank > /etc/pacman.d/mirrorlist
+		rm -f /etc/pacman.d/mirrorlist.rank
+	fi
+	
+	unset country mirrorlistnew rc
 }

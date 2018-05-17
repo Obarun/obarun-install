@@ -1,5 +1,5 @@
 #!@BINDIR@/bash
-# Copyright (c) 2015-2017 Eric Vidal <eric@obarun.org>
+# Copyright (c) 2015-2018 Eric Vidal <eric@obarun.org>
 # All rights reserved.
 # 
 # This file is part of Obarun. It is subject to the license terms in
@@ -16,10 +16,7 @@ config_custofile(){
 	custo_once config_user
 	custo_once config_keymap
 	custo_once config_xkeymap
-	custo_once config_mirrorlist
 	custo_once config_pac_sync
-	#custo_once config_pac
-	custo_once config_gpg 
 	custo_once config_pacopts
 }
 
@@ -52,6 +49,8 @@ config_locale(){
     echo LC_COLLATE=C >> "${NEWROOT}"/etc/locale.conf
 	
 	out_valid "Locale was created successfully"
+	
+	unset _locale
 }
 
 config_localetime(){
@@ -114,11 +113,6 @@ config_pac_sync(){
 	fi
 }
 
-config_pac(){
-	out_action "Change pacman.conf configuration"
-	sed -i "s:SigLevel = Never.*#:SigLevel = Required DatabaseOptional:" "${NEWROOT}"/etc/pacman.conf
-	sed -i "s:#SigLevel = PackageRequired:SigLevel = PackageRequired:" "${NEWROOT}"/etc/pacman.conf
-}
 config_gpg(){
 	
 	out_action "Check if gpg key exist"	
@@ -151,7 +145,7 @@ config_syslinux(){
 	fi
 }
 config_virtualbox(){
-	if [[ -n $(grep "Virtualbox" /sys/class/dmi/id/product_name) ]]; then
+	if [[ -n $(grep "VirtualBox" /sys/class/dmi/id/product_name) ]]; then
 		out_action "This is a VirtualBox machine. Do you want to install virtualbox guest modules [y|n]? :"
 		reply_answer
 		if (( ! $? )); then

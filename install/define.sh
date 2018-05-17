@@ -1,5 +1,5 @@
 #!@BINDIR@/bash
-# Copyright (c) 2015-2017 Eric Vidal <eric@obarun.org>
+# Copyright (c) 2015-2018 Eric Vidal <eric@obarun.org>
 # All rights reserved.
 # 
 # This file is part of Obarun. It is subject to the license terms in
@@ -28,31 +28,50 @@ define_hostname(){
 
 define_locale(){
 	
-	local enter 
-	local -a _locale
+	local enter _locale list_ 
+	local -a list_locale
 	
-	out_action "Define your locale by uncomment desired line, only one line is allowed"
-	out_info "Press enter to continue"
+	while read -r list_;do
+		case $list_ in
+			\#' '*) continue ;;
+			\#"") continue ;;
+			*) 	list_locale+=( "${list_##*#}" ) 
+				;;
+		esac
+	done < "${NEWROOT}"/etc/locale.gen
+	list_locale+=( "Exit" )
 	
-	read enter
-	
-	"$EDITOR" "${NEWROOT}"/etc/locale.gen
-	_locale=( $(grep -v "#" ${NEWROOT}/etc/locale.gen | awk -F " " '{ print $1 }') )
-	
-	while (( "${#_locale[@]}" > 1 )); do
-		out_notvalid "Only one line uncommented is allowed"
-		out_notvalid "Please edit again the file"
+	out_action "Define your main local"
+	select _locale in "${list_locale[@]}"; do
+		case "$_locale" in
+			Exit)unset _locale
+				break;;
+			*)if check_elements "$_locale" "${list_locale[@]}"; then
+				_locale="${_locale%%' '*}"
+				out_valid "Your main locale is now : ${_locale}"
+				break
+			  else 
+				out_notvalid "Invalid number, retry :"
+			  fi
+		esac
+	done
+	if [[ -z "${_locale}" ]]; then
+		out_notvalid "Locale is not set, pick en_US.UTF-8 by default"
+		_locale="en_US.UTF-8"
+	fi
+	out_action "Do you want to generate other locale?[y|n]"
+	reply_answer
+	if (( ! $? )); then
+		sed -i "s:^#${_locale}:${_locale}:g" "${NEWROOT}"/etc/locale.gen
+		out_action "Define your locale by uncomment the desired lines"
 		out_info "Press enter to continue"
 		read enter
 		"$EDITOR" "${NEWROOT}"/etc/locale.gen
-		_locale=( $(grep -v "#" ${NEWROOT}/etc/locale.gen | awk -F " " '{ print $1 }') )
-	done
-		
-	out_valid "your locale is now : $_locale"
+	fi
 	
 	sed -i "s,LOCALE=.*$,LOCALE=\"$_locale\",g" "${CONFIG}"
-	
-	unset enter _locale
+
+	unset enter _locale list_ list_locale
 }
 
 ##		Define localtime
@@ -183,9 +202,28 @@ define_user(){
 		fi
 	done
 	
-	if [[ ${#_newuser} -eq 0 ]] || [[ $_newuser =~ \ |\' ]] || [[ $_newuser =~ [^a-z0-9\ ] ]]; then
+	# firt pass, _newuser can not be :
+	#	empty  
+	#	higher than 16 character 
+	#   beginning by other character than lowercase or underscore
+	if [[ "${#_newuser}" -eq 0 ]] || [[ "${#_newuser}" -eq 17 ]] || ! [[ "${_newuser}" =~ ^[a-z]|^[_] ]]; then
 		out_notvalid "Invalid user name. Please retry :"
 		define_user
+	else
+		# second pass, invalid other choice than lowercase, underscore,dash, digit
+		# except for the last character
+		for ((c=0; c<${#_newuser}; c++));do
+			if [[ $((c+1)) == "${#_newuser}" ]]; then
+				# useradd accepted $ as last character, so allow it
+				if [[ "${_newuser:$c:1}" != @([a-z]|[_]|[-]|[0-9]|$) ]];then
+					out_notvalid "Invalid user name. Please retry :"
+					define_user
+				fi
+			elif [[ "${_newuser:$c:1}" != @([a-z]|[_]|[-]|[0-9]) ]];then
+				out_notvalid "Invalid user name. Please retry :"
+				define_user
+			fi 
+		done
 	fi
 	
 	out_valid "Name of the new account user is now : $_newuser"

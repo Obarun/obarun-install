@@ -1,5 +1,25 @@
 Changelog for obarun-install
 
+In 0.9.4
+-------
+	
+	- Nothing, cosmetic version
+
+In 0.9.3
+--------
+	
+	- Bugs fix
+	- Allow multiple generation of locale
+	- Copy AUR builded package to cache directory
+
+In 0.9.2
+--------
+
+	- Bugs fix
+	- Add rankmirrors features
+	- Add virtualbox detection
+	- Force to restart the script when obarun-install is upgraded
+	
 In 0.9.1
 --------
 	

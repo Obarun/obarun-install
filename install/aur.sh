@@ -1,5 +1,5 @@
 #!@BINDIR@/bash
-# Copyright (c) 2015-2017 Eric Vidal <eric@obarun.org>
+# Copyright (c) 2015-2018 Eric Vidal <eric@obarun.org>
 # All rights reserved.
 # 
 # This file is part of Obarun. It is subject to the license terms in
@@ -82,9 +82,9 @@ aur_build(){
 	work_dir="${2}"
 	
 	cd "${work_dir}"
-	
-	su "${OWNER}" -c "makepkg -Cs --noconfirm --needed --nosign"
-	
+	echo "%wheel ALL=(ALL) NOPASSWD: ALL #obarun-libs" >> /etc/sudoers
+	su "${OWNER}" -c "makepkg -Cs --noconfirm --nosign"
+	sed -i "s;%wheel ALL=(ALL) NOPASSWD: ALL #obarun-libs;;" /etc/sudoers
 	cd "${_oldpwd}"
 	
 	unset named work_dir _oldpwd
@@ -131,7 +131,10 @@ aur_install(){
 		out_action "Installing package ${named}"
 	
 		pacman -r "$NEWROOT" -U ${named}-*.pkg.tar.xz --config "$GENERAL_DIR/$CONFIG_DIR/pacman.conf" --cachedir "$CACHE_DIR" --noconfirm || die " Failed to install packages $named" "clean_install"
-	
+		
+		out_action "Copy all ${named}-*.pkg.tar.xz to $CACHE_DIR"
+		cp -a ${named}-*.pkg.tar.xz "$CACHE_DIR"
+		
 		cd "${_oldpwd}"
 	fi
 	
