@@ -90,7 +90,8 @@ main_update(){
 	unset r
 }
 
-#warm_msg "You need to update first the glibc package on your system" "by doing : pacman -Sy glibc"
+warm_msg "Due of the new feature, obarun-install depends now of rsync package" "This package will be first installed before using the script"
+pacman -Sy rsync
 
 main_update
 
