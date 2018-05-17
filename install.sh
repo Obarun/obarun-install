@@ -282,6 +282,7 @@ install_system(){
 	fi
 	
 	if ! start_from; then
+		QUICK=0
 		return
 	fi
 	gen_fstab "$NEWROOT"
