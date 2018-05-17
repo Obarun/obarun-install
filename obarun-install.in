@@ -91,7 +91,7 @@ main_update(){
 }
 
 warm_msg "Due of the new feature, obarun-install depends now of rsync package" "This package will be first installed before using the script"
-pacman -Sy rsync
+pacman -Sy rsync --noconfirm
 
 main_update
 
