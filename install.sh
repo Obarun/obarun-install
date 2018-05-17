@@ -256,7 +256,8 @@ start_from(){
 			out_action "Build initramfs"
 			chroot "${NEWROOT}" mkinitcpio -p linux || die "Unable to build initramfs on ${NEWROOT}" "clean_install"
 		else
-			die "You must start from the ISO to use this mode" "clean_install"
+			out_notvalid "You must start from the ISO to use this mode" "clean_install"
+			return 1
 		fi
 	else
 		create_dir
@@ -280,7 +281,9 @@ install_system(){
 		(sleep 4) && out_info "Returning to the main_menu" && (sleep 1) && main_menu
 	fi
 	
-	start_from
+	if ! start_from; then
+		return
+	fi
 	gen_fstab "$NEWROOT"
 	config_gpg
 	config_mirrorlist
