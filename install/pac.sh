@@ -137,10 +137,6 @@ install_package(){
 
 sync_data(){
 	
-	if [[ "${RANKMIRRORS}" == "yes" ]]; then
-		mirrorlist
-	fi
-	
 	out_action "Synchronize database"
 	pacman -Sy --config "$GENERAL_DIR/$CONFIG_DIR/pacman.conf" || die " Impossible to synchronize database" "clean_install"
 	

@@ -224,7 +224,7 @@ while [[ "$step" !=  11 ]]; do
 			11)	return 1;;
 			*) out_notvalid "Invalid number, please retry:"
 		esac
-		out_info "Press enter to return to the customizeChroot menu"
+		out_info "Press enter to return to the Customize menu"
 		read enter 
 done
 unset enter
@@ -280,7 +280,9 @@ install_system(){
 		out_notvalid "You need to mount a device on $NEWROOT or choose another directory"
 		(sleep 4) && out_info "Returning to the main_menu" && (sleep 1) && main_menu
 	fi
-	
+	if [[ "${RANKMIRRORS}" == "yes" ]]; then
+		mirrorlist
+	fi
 	if ! start_from; then
 		QUICK=0
 		return
