@@ -90,8 +90,9 @@ main_update(){
 	unset r
 }
 
-main_update
+#warm_msg "You need to update first the glibc package on your system" "by doing : pacman -Sy glibc"
 
+main_update
 
 main_menu
 

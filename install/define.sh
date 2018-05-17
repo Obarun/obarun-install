@@ -238,6 +238,7 @@ define_user(){
 define_root(){
 	
 	local pass_exist
+	local force="${1}"
 	pass_exist=$(grep "root" $NEWROOT/etc/shadow | awk -F':' '{print $2}')
 	
 	if [[ ! $(grep "root::" $NEWROOT/etc/shadow) ]]; then
@@ -250,7 +251,7 @@ define_root(){
 		
 	chmod 0750 "$NEWROOT/root"
 	
-	if [[ -z "${pass_exist}" ]]; then
+	if [[ -z "${pass_exist}" || (( "${force}" )) ]]; then
 		out_action "You need to define root password"
 		pass_root
 		out_valid "root user was modified successfully"

@@ -152,6 +152,13 @@ sync_data(){
 		
 }
 
+
+update_newroot(){
+	
+	out_action "Check for update..."
+	pacman -r "$NEWROOT" -Syu --config "$GENERAL_DIR/$CONFIG_DIR/pacman.conf" --cachedir "$CACHE_DIR" --noconfirm || die " Failed to update the fresh system with pacman" "clean_install"
+}
+
 mirrorlist(){
 	
 	local country rc
