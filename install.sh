@@ -242,8 +242,6 @@ copy_airootfs(){
 	out_action "Remove mkinitcpio-archiso.conf"
 	rm -f "${NEWROOT}"/etc/mkinitcpio-archiso.conf
 	mount_umount "$NEWROOT" "mount"
-	out_action "Build initramfs"
-	chroot "${NEWROOT}" mkinitcpio -p linux || die "Unable to build initramfs on ${NEWROOT}" "clean_install"
 	
 }
 start_from(){
@@ -255,6 +253,8 @@ start_from(){
 			check_gpg "$GPG_DIR"
 			sync_data
 			install_package
+			out_action "Build initramfs"
+			chroot "${NEWROOT}" mkinitcpio -p linux || die "Unable to build initramfs on ${NEWROOT}" "clean_install"
 		else
 			die "You must start from the ISO to use this mode" "clean_install"
 		fi
