@@ -103,12 +103,11 @@ choose_rootdir(){
 		out_notvalid "This is not a valide mountpoint, please retry :"
 		read -e _directory
 	done
-
+		
 	out_valid "Your root directory for installation is now : $_directory"
 	NEWROOT="${_directory}"
 	sed -i "s,NEWROOT=.*$,NEWROOT=\"$_directory\",g" /etc/obarun/install.conf
-	#source /etc/obarun/install.conf
-	
+		
 	unset _directory
 }
 
