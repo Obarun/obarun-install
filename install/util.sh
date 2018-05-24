@@ -27,14 +27,14 @@ clean_install(){
 	#fi
 		
 	# keep the configuration variable from install.conf
-	if [[ -f "$NEWROOT"/"$SOURCES_FUNC"/install.conf ]]; then
-		out_valid "Keeping the configuration from $NEWROOT/$SOURCES_FUNC/install.conf"
-		cp -f "$NEWROOT"/"$SOURCES_FUNC"/install.conf /etc/obarun/install.conf
+	if [[ -f "$NEWROOT$SOURCES_FUNC"/install.conf ]]; then
+		out_valid "Keeping the configuration from $NEWROOT$SOURCES_FUNC/install.conf"
+		cp -f "$NEWROOT$SOURCES_FUNC"/install.conf /etc/obarun/install.conf
 	fi
 	
-	if [[ -d "$NEWROOT"/"$SOURCES_FUNC" ]]; then
+	if [[ -d "$NEWROOT$SOURCES_FUNC" ]]; then
 		out_valid "Remove directory $SOURCES_FUNC"
-		rm -r "$NEWROOT"/"$SOURCES_FUNC"
+		rm -r "$NEWROOT$SOURCES_FUNC"
 	fi
 	
 	out_valid "Restore your shell options"
@@ -66,13 +66,14 @@ copy_file(){
 	else
 		out_valid "File resolv.conf already exist"
 	fi
-	if [[ ! -d "$NEWROOT/$SOURCES_FUNC" ]]; then
-		mkdir -p "$NEWROOT/$SOURCES_FUNC" || die " Impossible to create /tmp/obarun-install-tmp directory" "clean_install"
+	if [[ ! -d "$NEWROOT$SOURCES_FUNC" ]]; then
+		out_action "Create $NEWROOT$SOURCES_FUNC directory"
+		mkdir -p "$NEWROOT$SOURCES_FUNC" || die " Impossible to create $NEWROOT$SOURCES_FUNC directory" "clean_install"
 	fi
 	
 	for tidy_loop in /etc/obarun/install.conf $GENERAL_DIR/$CONFIG_DIR/customizeChroot; do
 		out_notvalid "Copying $tidy_loop"
-		cp -f "$tidy_loop" "$NEWROOT/$SOURCES_FUNC/" || die " Impossible to copy the file $tidy_loop" "clean_install"
+		cp -f "$tidy_loop" "$NEWROOT$SOURCES_FUNC/" || die " Impossible to copy the file $tidy_loop" "clean_install"
 	done
 	unset tidy_loop
 }
@@ -226,7 +227,7 @@ clean_once_file(){
 			break
 		done
 	else
-		out_info "Directory /root/tmp/obarun-install does not exist"
+		out_info "Directory ${SOURCES_FUNC} does not exist"
 	fi
 
 	unset action dir f_ file file_list
@@ -234,7 +235,7 @@ clean_once_file(){
 custo_once() {
 	local _tmp cmd
 	cmd="${1}"
-	_tmp="/tmp/obarun-install-tmp"
+	_tmp="${SOURCES_FUNC}"
 	
 	if [[ ! -d $_tmp ]]; then
 		mkdir -p -m0755 $_tmp || die "Impossible to create $_tmp"
