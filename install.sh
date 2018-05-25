@@ -300,8 +300,6 @@ install_system(){
 		out_action "Do you want to update the fresh installation? [y|n]"
 		reply_answer
 		if (( ! $? )); then
-			out_action "Hot fix : Remove libmozjs-52"
-			rm -f "${NEWROOT}"/usr/lib/libmozjs-52.so.0
 			update_newroot
 		fi
 	fi
