@@ -1,5 +1,14 @@
 Changelog for obarun-install
 
+In 0.9.5
+--------
+	
+	- Bugs fix
+	- Add warm message feature : be able to display important informations
+	  at the beginning of the installation
+	- Add Quick install feature : Copy the ISO as it on the DD
+	- Reorganize flow of the script and main menu to not confusing the user
+	
 In 0.9.4
 -------
 	
