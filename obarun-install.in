@@ -90,8 +90,7 @@ main_update(){
 	unset r
 }
 
-warm_msg "Due of the new feature, obarun-install depends now of rsync package" "This package will be first installed before using the script"
-pacman -Sy rsync --noconfirm
+warm_msg "Be aware that the Quick install mode only works with" "a ISO's version superior or equal at 2018-06"
 
 main_update
 
