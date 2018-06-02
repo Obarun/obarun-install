@@ -241,8 +241,6 @@ copy_airootfs(){
 	cp /run/archiso/bootmnt/arch/boot/x86_64/vmlinuz "${NEWROOT}"/boot/vmlinuz-linux || die "Unable to copy kernel on ${NEWROOT}" "clean_install"
 	out_action "Remove mkinitcpio-archiso.conf"
 	rm -f "${NEWROOT}"/etc/mkinitcpio-archiso.conf
-	mount_umount "$NEWROOT" "mount"
-	
 }
 start_from(){
 	
@@ -250,6 +248,7 @@ start_from(){
 		if [[ -d /run/archiso/sfs/airootfs/ ]];then
 			copy_airootfs
 			mount_umount "$NEWROOT" "mount"
+			mount_one  "${CACHE_DIR}" "${CACHE_DIR}" "$NEWROOT/var/cache/pacman/pkg" -o bind  
 			check_gpg "$GPG_DIR"
 			sync_data
 			install_package
@@ -262,6 +261,7 @@ start_from(){
 	else
 		create_dir
 		mount_umount "$NEWROOT" "mount"
+		mount_one "${CACHE_DIR}" "${CACHE_DIR}" "$NEWROOT/var/cache/pacman/pkg" -o bind
 		copy_file
 		check_gpg "$GPG_DIR"
 		sync_data
@@ -319,6 +319,7 @@ customize_newroot(){
 		
 	create_dir
 	mount_umount "$NEWROOT" "mount"
+	mount_one "${CACHE_DIR}" "${CACHE_DIR}" "$NEWROOT/var/cache/pacman/pkg" -o bind
 	copy_rootfs
 	define_root 
 	customizeChroot_menu
