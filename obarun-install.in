@@ -92,7 +92,7 @@ main_update(){
 
 warm_msg "Be aware that the Quick install mode only works with" "a ISO's version superior or equal at 2018-06" "Due of the new functionnalities, Obarun-libs package will be updated"
 pacman -Sy obarun-libs --noconfirm
-warm_msg "Obarun-libs was updated, please exist form the script and restart it before continuing pressing e Thanks"
+warm_msg "Obarun-libs was updated, please exist form the script and restart it before continuing pressing e Thanks" "This message will be displayed again, and again, please do not care about it and continue if you have already updated obarun-libs"
 
 main_update
 
