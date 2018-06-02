@@ -20,6 +20,7 @@ clean_install(){
 	
 	out_valid "Umount $NEWROOT"
 	mount_umount "$NEWROOT" "umount"
+	umount_one "${NEWROOT}/${CACHE_DIR}" "${NEWROOT}/${CACHE_DIR}"
 	
 	#if [[ $(awk -F':' '{ print $1}' /etc/passwd | grep usertmp) >/dev/null ]]; then
 	#	out_valid "Removing user usertmp"
@@ -91,14 +92,35 @@ copy_rootfs(){
 
 create_dir(){
 	out_action "Check for needed directory"
-	if ! [ -d "$NEWROOT/proc" ]; then 
-		out_notvalid "Create needed directory in ${NEWROOT}"
-		mkdir -m 0755 -p "$NEWROOT"/var/{cache/pacman/pkg,lib/pacman,log} "$NEWROOT"/{dev,run,etc}
-		mkdir -m 0755 -p "$NEWROOT"/dev/{pts,shm}
+	for id in var/cache/pacman/pkg var/lib/pacman var/log dev run etc etc/pacman.d/;do
+		if ! [ -d "$NEWROOT/$id" ]; then 
+			out_notvalid "Create ${NEWROOT}/$id directory"
+			mkdir -m 0755 -p "$NEWROOT/$id"
+		else
+			out_valid "${NEWROOT}/$id directory already exist"
+		fi
+	done
+	for id in dev/{pts,shm};do
+		if ! [ -d "$NEWROOT/$id" ]; then
+			out_notvalid "Create ${NEWROOT}/$id directory"
+			mkdir -m 0755 -p "$NEWROOT/$id"
+		else
+			out_valid "${NEWROOT}/$id directory already exist"
+		fi
+	done
+	for id in sys proc;do
+		if ! [ -d "$NEWROOT/$id" ]; then
+			out_notvalid "Create ${NEWROOT}/$id directory"
+			mkdir -m 0555 -p "$NEWROOT"/{sys,proc}
+		else
+			out_valid "${NEWROOT}/$id directory already exist"
+		fi
+	done
+	if ! [ -d "$NEWROOT/tmp" ]; then
+		out_notvalid "Create ${NEWROOT}/tmp directory"
 		mkdir -m 1777 -p "$NEWROOT"/tmp
-		mkdir -m 0555 -p "$NEWROOT"/{sys,proc}
 	else
-		out_valid "Directory needed already exists"
+		out_valid "${NEWROOT}/tmp directory already exist"
 	fi
 }
 ##		Select packages list
@@ -161,6 +183,7 @@ mc_newroot(){
 	
 	create_dir
 	mount_umount "$NEWROOT" "mount"
+	mount_one "${CACHE_DIR}" "${CACHE_DIR}" "$NEWROOT/var/cache/pacman/pkg" -o bind
 	SHELL=/bin/sh chroot "$NEWROOT" /usr/bin/mc
 }
 
@@ -177,6 +200,7 @@ call_shell(){
 		
 	create_dir
 	mount_umount "$NEWROOT" "mount"
+	mount_one "${CACHE_DIR}" "${CACHE_DIR}" "$NEWROOT/var/cache/pacman/pkg" -o bind
 	out_info "Tape exit when you have finished"
 	if [[ -e "$NEWROOT/usr/bin/zsh" ]]; then
 		SHELL=/bin/sh chroot "$NEWROOT" /usr/bin/zsh 
