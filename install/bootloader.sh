@@ -10,16 +10,20 @@
 
 syslinux_install(){
 	
-	local opts="$1"
+	local opts="$1" boot
 	
 	out_action "Installing bootloader: syslinux"
 	chroot "${NEWROOT}" syslinux-install_update $opts
 	
-	out_action "Maybe the partition name in the root parameter needs to be replaced."
-	out_action "Be sure to point the root partition in the line APPEND."
+	boot=$(lsblk -l | grep ${NEWROOT}/boot | awk -F" " '{print $1}')
+	if [[ -z "${boot}" ]]; then
+		boot="${NEWROOT}"
+	fi
+	sed -i "s:root=/dev/sda3:root=${boot}:g" "${NEWROOT}"/boot/syslinux/syslinux.cfg
+	
 	syslinux_edit
 	
-	out_valid "Syslinux install terminate"
+	out_valid "Syslinux installation is terminated"
 }
 
 syslinux_edit(){
@@ -40,13 +44,6 @@ syslinux_menu(){
 	while [[ "$step" != 5 ]]; do
 		clear
 		out_void
-		out_void
-		out_menu_title "**************************************************************"
-		out_menu_title "                      Assumptions"
-		out_menu_title "**************************************************************"
-		out_menu_list " Be aware that the boot partition need to be partitionned"
-		out_menu_list " with ext2 format. If it's not the case the boot installation"
-		out_menu_list " with syslinux will fail. Install and configure grub instead."
 		out_void
 		out_menu_title "**************************************************************"
 		out_menu_title "              Syslinux configuration menu"
